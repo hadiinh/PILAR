@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Laporan;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class LaporanController extends Controller
 {
+    public function __construct(protected NotifikasiService $notifikasi) {}
+
     public function index()
     {
         $user      = auth()->user();
@@ -47,7 +49,7 @@ class LaporanController extends Controller
             $fotoPath = $request->file('foto')->store('laporan', 'public');
         }
 
-        Laporan::create([
+        $laporan = Laporan::create([
             'user_id'   => auth()->id(),
             'judul'     => $validated['judul'],
             'tanggal'   => $validated['tanggal'],
@@ -57,6 +59,14 @@ class LaporanController extends Controller
             'foto'      => $fotoPath,
             'status'    => 'baru',
         ]);
+
+        // Kirim notifikasi WA ke admin & ketua RW
+        try {
+            $laporan->load('user');
+            $this->notifikasi->notifLaporanBaruKePengurus($laporan);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return redirect()->route('laporan.index')
             ->with('laporan_success', 'Laporan berhasil dikirim. Pengurus RW akan segera meninjau.');
@@ -82,7 +92,19 @@ class LaporanController extends Controller
     public function update(Request $request, Laporan $laporan)
     {
         $request->validate(['status' => 'required|in:baru,diproses,selesai']);
+
+        $statusLama = $laporan->status;
         $laporan->update(['status' => $request->status]);
+
+        // Notifikasi ke pelapor saat status berubah ke "diproses" atau "selesai"
+        if ($statusLama !== $laporan->status && in_array($laporan->status, ['diproses', 'selesai'])) {
+            try {
+                $laporan->load('user');
+                $this->notifikasi->notifStatusLaporanKePelapor($laporan);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         return redirect()->route('laporan.index')->with('success', 'Status laporan berhasil diperbarui.');
     }

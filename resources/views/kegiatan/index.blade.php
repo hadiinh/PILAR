@@ -7,7 +7,9 @@
 
 <x-page-header title="Kegiatan RW"
                subtitle="Dokumentasi & rencana kegiatan warga RW 016.">
-    <x-button href="{{ route('kegiatan.create') }}" variant="primary" icon="plus">Buat Kegiatan</x-button>
+    @if($isManager)
+        <x-button href="{{ route('kegiatan.create') }}" variant="primary" icon="plus">Buat Kegiatan</x-button>
+    @endif
 </x-page-header>
 
 <x-flash />
@@ -16,8 +18,10 @@
     <x-card>
         <x-empty-state icon="megaphone"
                        title="Belum ada kegiatan"
-                       description="Mulai catatkan kegiatan pertama untuk warga RW.">
-            <x-button href="{{ route('kegiatan.create') }}" variant="primary" icon="plus">Buat Kegiatan</x-button>
+                       description="{{ $isManager ? 'Mulai catatkan kegiatan pertama untuk warga RW.' : 'Belum ada kegiatan yang dipublikasikan pengurus RW.' }}">
+            @if($isManager)
+                <x-button href="{{ route('kegiatan.create') }}" variant="primary" icon="plus">Buat Kegiatan</x-button>
+            @endif
         </x-empty-state>
     </x-card>
 @else

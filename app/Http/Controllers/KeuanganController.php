@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Keuangan;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class KeuanganController extends Controller
@@ -15,7 +16,22 @@ class KeuanganController extends Controller
         $totalKeluar = (int) Keuangan::where('tipe', 'keluar')->sum('jumlah');
         $saldo       = $totalMasuk - $totalKeluar;
 
-        return view('keuangan.index', compact('data', 'saldo', 'totalMasuk', 'totalKeluar'));
+        // Statistik bulan ini
+        $awalBulan = Carbon::now()->startOfMonth();
+        $masukBulanIni = (int) Keuangan::where('tipe', 'masuk')
+            ->where('tanggal', '>=', $awalBulan)
+            ->sum('jumlah');
+        $keluarBulanIni = (int) Keuangan::where('tipe', 'keluar')
+            ->where('tanggal', '>=', $awalBulan)
+            ->sum('jumlah');
+
+        // Data chart 12 bulan
+        $chart = $this->buildChart(12);
+
+        return view('keuangan.index', compact(
+            'data', 'saldo', 'totalMasuk', 'totalKeluar',
+            'masukBulanIni', 'keluarBulanIni', 'chart'
+        ));
     }
 
     public function create()
@@ -62,5 +78,43 @@ class KeuanganController extends Controller
     {
         $keuangan->delete();
         return redirect('/keuangan')->with('success', 'Transaksi berhasil dihapus.');
+    }
+
+    /**
+     * Bangun chart 12 bulan: pemasukan, pengeluaran, saldo running.
+     */
+    protected function buildChart(int $bulan = 12): array
+    {
+        $labels = [];
+        $pemasukan = [];
+        $pengeluaran = [];
+        $saldoRunning = [];
+
+        $start = Carbon::now()->startOfMonth()->subMonths($bulan - 1);
+
+        $saldoSebelum = (int) Keuangan::where('tipe', 'masuk')
+                ->where('tanggal', '<', $start->toDateString())->sum('jumlah')
+            - (int) Keuangan::where('tipe', 'keluar')
+                ->where('tanggal', '<', $start->toDateString())->sum('jumlah');
+
+        $saldo = $saldoSebelum;
+
+        for ($i = 0; $i < $bulan; $i++) {
+            $cursor = (clone $start)->addMonths($i);
+            $awal   = $cursor->copy()->startOfMonth()->toDateString();
+            $akhir  = $cursor->copy()->endOfMonth()->toDateString();
+
+            $m = (int) Keuangan::where('tipe', 'masuk')->whereBetween('tanggal', [$awal, $akhir])->sum('jumlah');
+            $k = (int) Keuangan::where('tipe', 'keluar')->whereBetween('tanggal', [$awal, $akhir])->sum('jumlah');
+
+            $saldo += ($m - $k);
+
+            $labels[] = $cursor->translatedFormat('M Y');
+            $pemasukan[] = $m;
+            $pengeluaran[] = $k;
+            $saldoRunning[] = $saldo;
+        }
+
+        return compact('labels', 'pemasukan', 'pengeluaran', 'saldoRunning');
     }
 }

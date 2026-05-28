@@ -49,6 +49,7 @@
                 ['Foto',    '/foto',    'image',    'Dokumentasi kegiatan'],
                 ['Keuangan','/keuangan','wallet',   'Transparansi kas RW'],
                 ['Laporan', '/laporan', 'flag',     'Sampaikan keluhan'],
+                ['Kegiatan', '/kegiatan', 'megaphone', 'Info kegiatan terbaru'],
             ];
         @endphp
         @foreach($services as [$label, $href, $ic, $desc])
@@ -116,7 +117,7 @@
 
     @php
         $pengurus = [
-            ['name' => 'H. Bambang Sulistyo', 'role' => 'Ketua RW'],
+            ['name' => 'Yudi Sumartana', 'role' => 'Ketua RW'],
             ['name' => 'Ibu Ratna Dewi', 'role' => 'Sekretaris'],
         ];
     @endphp

@@ -36,6 +36,10 @@
         'document'    => 'M9 13h6m-6 4h4m1-13H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z',
         'building'    => 'M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01',
         'megaphone'   => 'M3 11v2a2 2 0 0 0 2 2h2l4 4V5L7 9H5a2 2 0 0 0-2 2Zm14-4v10m4-8v6',
+        'message'     => 'M21 12c0 4.4-4 8-9 8a10 10 0 0 1-4-.8L3 21l1.8-5A8.4 8.4 0 0 1 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z',
+        'chevron-right'=> 'M9 6l6 6-6 6',
+        'chevron-left' => 'M15 6l-6 6 6 6',
+        'shield'      => 'M12 3l8 3v6c0 4.4-3.4 8.4-8 9-4.6-.6-8-4.6-8-9V6l8-3Z',
     ];
     $d = $paths[$name] ?? $paths['info'];
 @endphp

@@ -1,0 +1,185 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Jadwal;
+use App\Models\Kegiatan;
+use App\Models\Laporan;
+use App\Models\PengajuanAkun;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Helper untuk merangkai pesan WA dan mengirimkannya ke audiens yang tepat.
+ * Semua pengiriman dilakukan melalui FonnteService, kegagalan tidak
+ * memboikot eksekusi proses pemanggil.
+ */
+class NotifikasiService
+{
+    public function __construct(protected FonnteService $fonnte) {}
+
+    /* ===== Audience helpers ===== */
+
+    protected function warga()
+    {
+        return User::query()
+            ->where('role', 'user')
+            ->where('akun_aktif', true)
+            ->where('notif_wa_aktif', true)
+            ->whereNotNull('no_hp')
+            ->get();
+    }
+
+    protected function pengurus()
+    {
+        return User::query()
+            ->whereIn('role', ['admin', 'ketua_rw'])
+            ->where('akun_aktif', true)
+            ->where('notif_wa_aktif', true)
+            ->whereNotNull('no_hp')
+            ->get();
+    }
+
+    /* ===== Jadwal ===== */
+
+    public function broadcastJadwalBaru(Jadwal $jadwal): void
+    {
+        $tgl = Carbon::parse($jadwal->tanggal)->translatedFormat('l, d F Y');
+        $jam = Carbon::parse($jadwal->jam)->format('H:i');
+
+        $pesan = "*[Jadwal Baru - RW 016]*\n\n"
+            . "Halo Warga,\n"
+            . "Pengurus RW menambahkan jadwal baru:\n\n"
+            . "Judul    : {$jadwal->judul}\n"
+            . "Tanggal  : {$tgl}\n"
+            . "Jam      : {$jam} WIB\n"
+            . "Lokasi   : {$jadwal->lokasi}\n"
+            . ($jadwal->kategori ? "Kategori : {$jadwal->kategori}\n" : "")
+            . ($jadwal->deskripsi ? "\nKeterangan:\n{$jadwal->deskripsi}\n" : "")
+            . "\nMohon dicatat. Terima kasih.";
+
+        $jumlah = $this->fonnte->kirimKeUsers($this->warga(), $pesan, 'jadwal_baru');
+        Log::info('[Notifikasi] Broadcast jadwal baru', ['jadwal_id' => $jadwal->id, 'terkirim' => $jumlah]);
+    }
+
+    /* ===== Kegiatan ===== */
+
+    public function broadcastKegiatanBaru(Kegiatan $kegiatan): void
+    {
+        $tgl = Carbon::parse($kegiatan->tanggal)->translatedFormat('l, d F Y');
+
+        $pesan = "*[Pengumuman / Kegiatan Baru - RW 016]*\n\n"
+            . "Halo Warga,\n"
+            . "Ada kegiatan / pengumuman baru dari pengurus RW:\n\n"
+            . "Judul   : {$kegiatan->judul}\n"
+            . "Tanggal : {$tgl}\n\n"
+            . "Keterangan:\n" . trim(strip_tags($kegiatan->deskripsi)) . "\n\n"
+            . "Terima kasih atas perhatiannya.";
+
+        $jumlah = $this->fonnte->kirimKeUsers($this->warga(), $pesan, 'kegiatan_baru');
+        Log::info('[Notifikasi] Broadcast kegiatan baru', ['kegiatan_id' => $kegiatan->id, 'terkirim' => $jumlah]);
+    }
+
+    /* ===== Laporan ===== */
+
+    public function notifLaporanBaruKePengurus(Laporan $laporan): void
+    {
+        $pelapor = $laporan->user?->name ?? 'Tidak diketahui';
+        $waktu   = Carbon::parse($laporan->created_at ?? now())->translatedFormat('d M Y H:i');
+        $ringkas = $laporan->deskripsi
+            ? \Illuminate\Support\Str::limit($laporan->deskripsi, 160)
+            : '(tidak ada deskripsi)';
+
+        $pesan = "*[Laporan Warga Baru - RW 016]*\n\n"
+            . "Ada laporan baru masuk yang membutuhkan tinjauan pengurus.\n\n"
+            . "Pelapor   : {$pelapor}\n"
+            . "Kategori  : {$laporan->judul}\n"
+            . "Lokasi    : {$laporan->lokasi}\n"
+            . "Waktu     : {$waktu}\n\n"
+            . "Ringkasan:\n{$ringkas}\n\n"
+            . "Silakan buka aplikasi PILAR RW untuk meninjau dan menindaklanjuti.";
+
+        $jumlah = $this->fonnte->kirimKeUsers($this->pengurus(), $pesan, 'laporan_baru');
+        Log::info('[Notifikasi] Notif laporan baru ke pengurus', [
+            'laporan_id' => $laporan->id,
+            'terkirim'   => $jumlah,
+        ]);
+    }
+
+    public function notifStatusLaporanKePelapor(Laporan $laporan): void
+    {
+        $user = $laporan->user;
+        if (!$user || !$user->bisaTerimaWa()) {
+            return;
+        }
+
+        $pesan = match ($laporan->status) {
+            'diproses' => "*[Status Laporan Anda - RW 016]*\n\n"
+                . "Halo {$user->name},\n\n"
+                . "Laporan Anda dengan kategori \"{$laporan->judul}\" "
+                . "sedang diproses oleh pengurus RW. "
+                . "Kami akan mengabari kembali jika sudah ada perkembangan.\n\n"
+                . "Terima kasih atas partisipasi Anda.",
+
+            'selesai'  => "*[Status Laporan Anda - RW 016]*\n\n"
+                . "Halo {$user->name},\n\n"
+                . "Laporan Anda dengan kategori \"{$laporan->judul}\" "
+                . "telah selesai ditangani oleh pengurus RW.\n\n"
+                . "Terima kasih telah membantu menjaga lingkungan kita.",
+
+            default    => null,
+        };
+
+        if (!$pesan) return;
+
+        $this->fonnte->kirim($user->no_hp, $pesan, 'laporan_status', $user);
+    }
+
+    /* ===== Pengajuan akun ===== */
+
+    /**
+     * @param  string|null  $passwordPlain  Hanya berisi nilai bila pengajuan TIDAK punya password_hash
+     *                                       sehingga sistem terpaksa generate password baru.
+     */
+    public function notifPengajuanDisetujui(PengajuanAkun $pengajuan, User $user, ?string $passwordPlain = null): void
+    {
+        $loginUrl = url('/login');
+
+        if ($passwordPlain !== null) {
+            // Jalur fallback: pengajuan lama tanpa password_hash → kirim password baru.
+            $pesan = "*[Pengajuan Akun Disetujui - PILAR RW 016]*\n\n"
+                . "Halo {$user->name},\n\n"
+                . "Pengajuan akun Sistem RW Anda telah *disetujui*.\n\n"
+                . "Detail akun:\n"
+                . "NIK      : {$user->nik}\n"
+                . "Password : {$passwordPlain}\n\n"
+                . "Silakan login melalui:\n{$loginUrl}\n\n"
+                . "Demi keamanan, segera ubah password setelah berhasil login.";
+        } else {
+            // Jalur normal: user login dengan password yang ia tentukan sendiri saat pengajuan.
+            $pesan = "*[Pengajuan Akun Disetujui - PILAR RW 016]*\n\n"
+                . "Halo {$user->name},\n\n"
+                . "Pengajuan akun Sistem RW Anda telah *disetujui*.\n\n"
+                . "Silakan masuk menggunakan NIK ({$user->nik}) dan *kata sandi yang Anda buat saat mengajukan akun*.\n\n"
+                . "Halaman login:\n{$loginUrl}\n\n"
+                . "Jika lupa kata sandi, hubungi pengurus RW untuk reset.";
+        }
+
+        $this->fonnte->kirim($pengajuan->no_hp, $pesan, 'pengajuan_disetujui', $user);
+    }
+
+    public function notifPengajuanDitolak(PengajuanAkun $pengajuan, ?User $user = null): void
+    {
+        $nama = $user?->name ?? 'Warga';
+        $alasan = $pengajuan->alasan_tolak ?: 'Data tidak memenuhi kriteria pengajuan.';
+
+        $pesan = "*[Pengajuan Akun Ditolak - PILAR RW 016]*\n\n"
+            . "Halo {$nama},\n\n"
+            . "Pengajuan akun Sistem RW Anda *ditolak*.\n\n"
+            . "Alasan:\n{$alasan}\n\n"
+            . "Silakan hubungi pengurus RW untuk informasi lebih lanjut.";
+
+        $this->fonnte->kirim($pengajuan->no_hp, $pesan, 'pengajuan_ditolak', $user);
+    }
+}

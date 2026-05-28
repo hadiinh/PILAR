@@ -5,9 +5,15 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FotoController;
 use App\Http\Controllers\JadwalController;
 use App\Http\Controllers\KegiatanController;
+use App\Http\Controllers\KeluargaController;
 use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\NotifikasiLogController;
+use App\Http\Controllers\PengajuanAkunController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StatistikWargaController;
+use App\Http\Controllers\WargaController;
+use App\Http\Controllers\WilayahController;
 use App\Models\Foto;
 use App\Models\Jadwal;
 use App\Models\Kegiatan;
@@ -23,15 +29,31 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login',     [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login',    [AuthController::class, 'login']);
-    Route::get('/register',  [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+
+    // Pengajuan akun (registrasi dilakukan via pengajuan)
+    Route::get('/pengajuan-akun',  [PengajuanAkunController::class, 'create'])->name('pengajuan.create');
+    Route::post('/pengajuan-akun', [PengajuanAkunController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('pengajuan.store');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::get('/', fn () => auth()->check() ? redirect('/beranda') : redirect('/login'));
+
+/*
+|--------------------------------------------------------------------------
+| API Wilayah Indonesia (proxy + cache)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('api/wilayah')->name('wilayah.')->group(function () {
+    Route::get('/provinsi',                [WilayahController::class, 'provinsi'])->name('provinsi');
+    Route::get('/kota/{provinsiId}',       [WilayahController::class, 'kota'])->name('kota')->whereNumber('provinsiId');
+    Route::get('/kecamatan/{kotaId}',      [WilayahController::class, 'kecamatan'])->name('kecamatan')->whereNumber('kotaId');
+    Route::get('/kelurahan/{kecamatanId}', [WilayahController::class, 'kelurahan'])->name('kelurahan')->whereNumber('kecamatanId');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -57,7 +79,8 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('beranda');
 
-    Route::post('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/update',          [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/change-password', [ProfileController::class, 'changePassword'])->name('profile.changePassword');
 });
 
 /*
@@ -71,8 +94,7 @@ Route::middleware(['auth', 'role:ketua_rw,admin'])
 
 /*
 |--------------------------------------------------------------------------
-| Manager routes (pengurus/admin) — daftarkan SEBELUM rute /{id}
-| untuk menghindari konflik dengan parameter route binding.
+| Manager routes (pengurus/admin)
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'role:ketua_rw,admin'])->group(function () {
@@ -81,13 +103,37 @@ Route::middleware(['auth', 'role:ketua_rw,admin'])->group(function () {
     Route::resource('foto',     FotoController::class)->except(['index', 'show']);
     Route::post('foto/bulk-delete', [FotoController::class, 'bulkDelete'])->name('foto.bulkDelete');
     Route::resource('keuangan', KeuanganController::class)->except(['index', 'show']);
+    Route::resource('kegiatan', KegiatanController::class)->except(['index', 'show']);
 
-    Route::get('/kegiatan/{kegiatan}/edit', [KegiatanController::class, 'edit'])->name('kegiatan.edit');
-    Route::put('/kegiatan/{kegiatan}',      [KegiatanController::class, 'update'])->name('kegiatan.update');
-    Route::delete('/kegiatan/{kegiatan}',   [KegiatanController::class, 'destroy'])->name('kegiatan.destroy');
+    Route::get('/laporan/{laporan}/edit', [LaporanController::class, 'edit'])->name('laporan.edit');
+    Route::put('/laporan/{laporan}',      [LaporanController::class, 'update'])->name('laporan.update');
 
-    Route::get('/laporan/{laporan}/edit',   [LaporanController::class, 'edit'])->name('laporan.edit');
-    Route::put('/laporan/{laporan}',        [LaporanController::class, 'update'])->name('laporan.update');
+    // Manajemen warga
+    Route::get('/warga',                       [WargaController::class, 'index'])->name('warga.index');
+    Route::get('/warga/create',                [WargaController::class, 'create'])->name('warga.create');
+    Route::post('/warga',                      [WargaController::class, 'store'])->name('warga.store');
+    Route::get('/warga/{warga}/edit',          [WargaController::class, 'edit'])->name('warga.edit');
+    Route::put('/warga/{warga}',               [WargaController::class, 'update'])->name('warga.update');
+    Route::post('/warga/{warga}/deactivate',   [WargaController::class, 'deactivate'])->name('warga.deactivate');
+    Route::post('/warga/{warga}/activate',     [WargaController::class, 'activate'])->name('warga.activate');
+    Route::post('/warga/{warga}/reset-password', [WargaController::class, 'resetPassword'])->name('warga.resetPassword');
+
+    // Keluarga
+    Route::get('/keluarga',          [KeluargaController::class, 'index'])->name('keluarga.index');
+    Route::get('/keluarga/{noKk}',   [KeluargaController::class, 'show'])->name('keluarga.show')->where('noKk', '[0-9]+');
+
+    // Statistik warga
+    Route::get('/statistik', [StatistikWargaController::class, 'index'])->name('statistik.index');
+
+    // Pengajuan akun
+    Route::get('/pengajuan',                       [PengajuanAkunController::class, 'index'])->name('pengajuan.index');
+    Route::get('/pengajuan/{pengajuan}',           [PengajuanAkunController::class, 'show'])->name('pengajuan.show');
+    Route::post('/pengajuan/{pengajuan}/approve',  [PengajuanAkunController::class, 'approve'])->name('pengajuan.approve');
+    Route::post('/pengajuan/{pengajuan}/reject',   [PengajuanAkunController::class, 'reject'])->name('pengajuan.reject');
+
+    // Log notifikasi
+    Route::get('/notifikasi',                [NotifikasiLogController::class, 'index'])->name('notifikasi.index');
+    Route::post('/notifikasi/{log}/retry',   [NotifikasiLogController::class, 'retry'])->name('notifikasi.retry');
 
     Route::get('/users', function () {
         return view('users.index', ['users' => User::orderBy('name')->get()]);
@@ -97,7 +143,6 @@ Route::middleware(['auth', 'role:ketua_rw,admin'])->group(function () {
 /*
 |--------------------------------------------------------------------------
 | Modul utama (warga lihat / buat)
-| Constraint `where(... , '[0-9]+')` mencegah /create tertangkap show.
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
@@ -105,10 +150,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/jadwal',          [JadwalController::class, 'index'])->name('jadwal.index');
     Route::get('/jadwal/{jadwal}', [JadwalController::class, 'show'])->name('jadwal.show')->whereNumber('jadwal');
 
-    Route::get('/kegiatan',                  [KegiatanController::class, 'index'])->name('kegiatan.index');
-    Route::get('/kegiatan/create',           [KegiatanController::class, 'create'])->name('kegiatan.create');
-    Route::post('/kegiatan',                 [KegiatanController::class, 'store'])->name('kegiatan.store');
-    Route::get('/kegiatan/{kegiatan}',       [KegiatanController::class, 'show'])->name('kegiatan.show')->whereNumber('kegiatan');
+    Route::get('/kegiatan',            [KegiatanController::class, 'index'])->name('kegiatan.index');
+    Route::get('/kegiatan/{kegiatan}', [KegiatanController::class, 'show'])->name('kegiatan.show')->whereNumber('kegiatan');
 
     Route::get('/foto',          [FotoController::class, 'index'])->name('foto.index');
     Route::get('/foto/{foto}',   [FotoController::class, 'show'])->name('foto.show')->whereNumber('foto');

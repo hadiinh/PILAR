@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Jadwal;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 
 class JadwalController extends Controller
 {
+    public function __construct(protected NotifikasiService $notifikasi) {}
+
     public function index()
     {
         $jadwals = Jadwal::orderBy('tanggal', 'desc')->orderBy('jam', 'desc')->get();
@@ -29,7 +32,7 @@ class JadwalController extends Controller
             'kategori'  => 'nullable|string|max:50',
         ]);
 
-        Jadwal::create([
+        $jadwal = Jadwal::create([
             'judul'     => $validated['judul'],
             'deskripsi' => $validated['deskripsi'] ?? '',
             'tanggal'   => $validated['tanggal'],
@@ -39,7 +42,14 @@ class JadwalController extends Controller
             'status'    => 'Aktif',
         ]);
 
-        return redirect()->route('jadwal.index')->with('success', 'Jadwal berhasil ditambahkan.');
+        // Notifikasi WA broadcast ke warga (jangan rusak alur kalau gagal)
+        try {
+            $this->notifikasi->broadcastJadwalBaru($jadwal);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return redirect()->route('jadwal.index')->with('success', 'Jadwal berhasil ditambahkan dan notifikasi WA dikirim.');
     }
 
     public function show(Jadwal $jadwal)

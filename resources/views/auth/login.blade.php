@@ -6,20 +6,23 @@
 <x-card padding="p-6 sm:p-8">
     <div class="text-center mb-6">
         <h1 class="text-2xl font-bold text-zinc-900">Selamat datang</h1>
-        <p class="text-sm text-zinc-500 mt-1">Masuk untuk melanjutkan ke PILAR RW 016.</p>
+        <p class="text-sm text-zinc-500 mt-1">Masuk dengan NIK Anda untuk melanjutkan ke PILAR RW 016.</p>
     </div>
 
     <x-flash />
 
     <form action="{{ url('/login') }}" method="POST" class="space-y-4">
         @csrf
-        <x-input name="email"
-                 type="email"
-                 label="Email"
-                 placeholder="contoh@email.com"
-                 hint="Gunakan email yang sudah didaftarkan."
+        <x-input name="nik"
+                 type="text"
+                 inputmode="numeric"
+                 label="NIK"
+                 placeholder="16 digit NIK"
+                 hint="Gunakan NIK yang terdaftar di RW."
                  required
-                 autocomplete="email"
+                 maxlength="16"
+                 pattern="[0-9]{16}"
+                 autocomplete="username"
                  autofocus />
         <x-input name="password"
                  type="password"
@@ -38,15 +41,16 @@
 
     <p class="text-center text-sm text-zinc-600 mt-6">
         Belum punya akun?
-        <a href="{{ url('/register') }}" class="font-semibold text-brand-700 hover:text-brand-800">Daftar di sini</a>
+        <a href="{{ url('/pengajuan-akun') }}" class="font-semibold text-brand-700 hover:text-brand-800">Ajukan akun di sini</a>
     </p>
 
     @env('local')
         <div class="mt-6 border-t border-zinc-200 pt-4">
             <p class="text-xs font-semibold text-zinc-700 mb-2">Akun demo (mode lokal):</p>
             <ul class="text-xs text-zinc-600 space-y-1">
-                <li><span class="font-semibold">Ketua RW:</span> rw@gmail.com</li>
-                <li><span class="font-semibold">Admin:</span> admin@gmail.com</li>
+                <li><span class="font-semibold">Ketua RW:</span> 3277010003000001</li>
+                <li><span class="font-semibold">Admin:</span> 3277010003000002</li>
+                <li><span class="font-semibold">Warga:</span> 3277010003001001</li>
                 <li><span class="font-semibold">Kata sandi:</span> password</li>
             </ul>
         </div>

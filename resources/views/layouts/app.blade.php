@@ -17,7 +17,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#245644">
     <title>@yield('title', 'PILAR RW 016') · PILAR RW 016</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/wilayah.js'])
 </head>
 <body class="min-h-screen bg-zinc-50 text-zinc-900 antialiased">
 
@@ -41,18 +41,27 @@
         <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
             @php
                 $items = [
-                    ['label' => 'Beranda',  'href' => '/beranda',  'icon' => 'home',     'active' => $isActive('beranda')],
-                    ['label' => 'Dashboard','href' => '/dashboard','icon' => 'building', 'active' => $isActive('dashboard'), 'show' => $isManager],
-                    ['label' => 'Jadwal',   'href' => '/jadwal',   'icon' => 'calendar', 'active' => $isActive('jadwal')],
-                    ['label' => 'Kegiatan', 'href' => '/kegiatan', 'icon' => 'megaphone','active' => $isActive('kegiatan')],
-                    ['label' => 'Foto',     'href' => '/foto',     'icon' => 'image',    'active' => $isActive('foto')],
-                    ['label' => 'Keuangan', 'href' => '/keuangan', 'icon' => 'wallet',   'active' => $isActive('keuangan')],
-                    ['label' => 'Laporan',  'href' => '/laporan',  'icon' => 'flag',     'active' => $isActive('laporan')],
-                    ['label' => 'Warga',    'href' => '/users',    'icon' => 'users',    'active' => $isActive('users'), 'show' => $isManager],
+                    ['label' => 'Beranda',     'href' => '/beranda',    'icon' => 'home',     'active' => $isActive('beranda')],
+                    ['label' => 'Dashboard',   'href' => '/dashboard',  'icon' => 'building', 'active' => $isActive('dashboard'), 'show' => $isManager],
+                    ['label' => 'Jadwal',      'href' => '/jadwal',     'icon' => 'calendar', 'active' => $isActive('jadwal')],
+                    ['label' => 'Kegiatan',    'href' => '/kegiatan',   'icon' => 'megaphone','active' => $isActive('kegiatan')],
+                    ['label' => 'Foto',        'href' => '/foto',       'icon' => 'image',    'active' => $isActive('foto')],
+                    ['label' => 'Keuangan',    'href' => '/keuangan',   'icon' => 'wallet',   'active' => $isActive('keuangan')],
+                    ['label' => 'Laporan',     'href' => '/laporan',    'icon' => 'flag',     'active' => $isActive('laporan')],
+                    ['heading' => 'Manajemen', 'show' => $isManager],
+                    ['label' => 'Manajemen Warga','href' => '/warga',   'icon' => 'users',    'active' => $isActive('warga'),       'show' => $isManager],
+                    ['label' => 'Keluarga',    'href' => '/keluarga',   'icon' => 'users',    'active' => $isActive('keluarga'),    'show' => $isManager],
+                    ['label' => 'Statistik',   'href' => '/statistik',  'icon' => 'building', 'active' => $isActive('statistik'),   'show' => $isManager],
+                    ['label' => 'Pengajuan Akun','href' => '/pengajuan','icon' => 'clock',    'active' => $isActive('pengajuan'),   'show' => $isManager],
+                    ['label' => 'Notifikasi',  'href' => '/notifikasi', 'icon' => 'message',  'active' => $isActive('notifikasi'),  'show' => $isManager],
                 ];
             @endphp
             @foreach($items as $it)
-                @if(!isset($it['show']) || $it['show'])
+                @if(isset($it['heading']))
+                    @if(!isset($it['show']) || $it['show'])
+                        <p class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ $it['heading'] }}</p>
+                    @endif
+                @elseif(!isset($it['show']) || $it['show'])
                     <a href="{{ url($it['href']) }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ $it['active'] ? 'bg-brand-50 text-brand-800' : 'text-zinc-700 hover:bg-zinc-100' }}">
                         <x-icon :name="$it['icon']" class="w-5 h-5 {{ $it['active'] ? 'text-brand-700' : 'text-zinc-500' }}" />

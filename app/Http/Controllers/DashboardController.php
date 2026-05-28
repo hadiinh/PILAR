@@ -8,6 +8,7 @@ use App\Models\Kegiatan;
 use App\Models\Keuangan;
 use App\Models\Laporan;
 use App\Models\User;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -40,8 +41,61 @@ class DashboardController extends Controller
         $recentKeuangan = Keuangan::latest()->take(5)->get();
         $recentFoto     = Foto::latest()->take(6)->get();
 
+        // Data grafik keuangan 12 bulan terakhir (pemasukan, pengeluaran, saldo bulanan)
+        $chart = $this->buildChartKeuangan(12);
+
         return view('dashboard.index', compact(
-            'stats', 'recentJadwal', 'recentLaporan', 'recentKeuangan', 'recentFoto', 'isManager'
+            'stats', 'recentJadwal', 'recentLaporan', 'recentKeuangan',
+            'recentFoto', 'isManager', 'chart'
         ));
+    }
+
+    /**
+     * Bangun dataset 12 bulan ke belakang untuk Chart.js.
+     */
+    protected function buildChartKeuangan(int $bulan = 12): array
+    {
+        $labels   = [];
+        $pemasukan = [];
+        $pengeluaran = [];
+        $saldoRunning = [];
+
+        // hitung saldo awal sebelum periode
+        $start = Carbon::now()->startOfMonth()->subMonths($bulan - 1);
+        $saldoSebelum = (int) Keuangan::where('tipe', 'masuk')
+                ->where('tanggal', '<', $start->toDateString())
+                ->sum('jumlah')
+            - (int) Keuangan::where('tipe', 'keluar')
+                ->where('tanggal', '<', $start->toDateString())
+                ->sum('jumlah');
+
+        $saldo = $saldoSebelum;
+
+        for ($i = 0; $i < $bulan; $i++) {
+            $cursor = (clone $start)->addMonths($i);
+            $awal   = $cursor->copy()->startOfMonth()->toDateString();
+            $akhir  = $cursor->copy()->endOfMonth()->toDateString();
+
+            $m = (int) Keuangan::where('tipe', 'masuk')
+                ->whereBetween('tanggal', [$awal, $akhir])
+                ->sum('jumlah');
+            $k = (int) Keuangan::where('tipe', 'keluar')
+                ->whereBetween('tanggal', [$awal, $akhir])
+                ->sum('jumlah');
+
+            $saldo += ($m - $k);
+
+            $labels[]      = $cursor->translatedFormat('M Y');
+            $pemasukan[]   = $m;
+            $pengeluaran[] = $k;
+            $saldoRunning[] = $saldo;
+        }
+
+        return [
+            'labels'      => $labels,
+            'pemasukan'   => $pemasukan,
+            'pengeluaran' => $pengeluaran,
+            'saldo'       => $saldoRunning,
+        ];
     }
 }

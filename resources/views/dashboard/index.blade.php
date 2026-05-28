@@ -33,6 +33,41 @@
     <x-stat label="Warga Terdaftar" value="{{ $stats['total_user'] }}" icon="users" tone="info" />
     <x-stat label="Total Kegiatan" value="{{ $stats['total_kegiatan'] }}" icon="megaphone" tone="neutral" />
 </div>
+
+{{-- ===== Grafik Keuangan ===== --}}
+<x-card class="mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div>
+            <h2 class="font-semibold text-zinc-900">Grafik Keuangan RW</h2>
+            <p class="text-xs text-zinc-500">Perkembangan kas 12 bulan terakhir.</p>
+        </div>
+        <div class="hidden sm:flex gap-1 rounded-lg bg-zinc-100 p-1 text-xs font-semibold">
+            <button type="button" data-chart-view="bar"
+                    class="chart-toggle px-3 h-8 rounded-md bg-white shadow-sm text-zinc-900">Bulanan</button>
+            <button type="button" data-chart-view="line"
+                    class="chart-toggle px-3 h-8 rounded-md text-zinc-600">Saldo Berjalan</button>
+        </div>
+    </div>
+
+    <div class="relative" style="height: 320px;">
+        <canvas id="chartKeuangan"></canvas>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-zinc-200 text-center">
+        <div>
+            <p class="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Pemasukan</p>
+            <p class="text-sm font-bold text-emerald-700">Rp {{ number_format(array_sum($chart['pemasukan'])) }}</p>
+        </div>
+        <div>
+            <p class="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Pengeluaran</p>
+            <p class="text-sm font-bold text-red-700">Rp {{ number_format(array_sum($chart['pengeluaran'])) }}</p>
+        </div>
+        <div>
+            <p class="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Saldo Akhir</p>
+            <p class="text-sm font-bold text-brand-700">Rp {{ number_format(end($chart['saldo']) ?: 0) }}</p>
+        </div>
+    </div>
+</x-card>
 @endif
 
 {{-- Two-column body --}}
@@ -162,5 +197,159 @@
         </div>
     </x-card>
 </div>
+
+@if($isManager)
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const start = () => {
+        if (typeof Chart === 'undefined') return setTimeout(start, 50);
+
+        const labels      = @json($chart['labels']);
+        const pemasukan   = @json($chart['pemasukan']);
+        const pengeluaran = @json($chart['pengeluaran']);
+        const saldo       = @json($chart['saldo']);
+
+        const fmtRupiah = (v) => 'Rp ' + Number(v).toLocaleString('id-ID');
+
+        const ctx = document.getElementById('chartKeuangan');
+        if (!ctx) return;
+
+        const colors = {
+            masuk:  '#3a8567',
+            keluar: '#dc2626',
+            saldo:  '#1f5fa6',
+            grid:   '#e4e4e7',
+            text:   '#52525b',
+        };
+
+        const baseTooltip = {
+            backgroundColor: '#fff',
+            titleColor: '#18181b',
+            bodyColor: '#3f3f46',
+            borderColor: '#e4e4e7',
+            borderWidth: 1,
+            padding: 10,
+            boxPadding: 6,
+            callbacks: {
+                label: (c) => c.dataset.label + ': ' + fmtRupiah(c.parsed.y),
+            },
+        };
+
+        const baseScales = {
+            x: { grid: { display: false }, ticks: { color: colors.text, font: { size: 11 } } },
+            y: {
+                beginAtZero: true,
+                grid: { color: colors.grid, drawBorder: false },
+                ticks: {
+                    color: colors.text,
+                    font: { size: 11 },
+                    callback: (v) => {
+                        if (v >= 1_000_000) return (v / 1_000_000) + ' jt';
+                        if (v >= 1_000) return (v / 1_000) + ' rb';
+                        return v;
+                    },
+                },
+            },
+        };
+
+        let chart;
+
+        function render(view) {
+            if (chart) chart.destroy();
+
+            if (view === 'line') {
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Saldo Berjalan',
+                            data: saldo,
+                            borderColor: colors.saldo,
+                            backgroundColor: 'rgba(31,95,166,0.10)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: colors.saldo,
+                            pointBorderWidth: 2,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: baseTooltip,
+                        },
+                        scales: baseScales,
+                    },
+                });
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Pemasukan',
+                                data: pemasukan,
+                                backgroundColor: colors.masuk,
+                                borderRadius: 6,
+                                maxBarThickness: 28,
+                            },
+                            {
+                                label: 'Pengeluaran',
+                                data: pengeluaran,
+                                backgroundColor: colors.keluar,
+                                borderRadius: 6,
+                                maxBarThickness: 28,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: colors.text,
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    font: { size: 12, weight: '600' },
+                                    padding: 14,
+                                },
+                            },
+                            tooltip: baseTooltip,
+                        },
+                        scales: baseScales,
+                    },
+                });
+            }
+        }
+
+        render('bar');
+
+        document.querySelectorAll('.chart-toggle').forEach((btn) => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.chart-toggle').forEach((b) => {
+                    b.classList.remove('bg-white', 'shadow-sm', 'text-zinc-900');
+                    b.classList.add('text-zinc-600');
+                });
+                this.classList.add('bg-white', 'shadow-sm', 'text-zinc-900');
+                this.classList.remove('text-zinc-600');
+                render(this.dataset.chartView);
+            });
+        });
+    };
+    start();
+});
+</script>
+@endpush
+@endif
 
 @endsection

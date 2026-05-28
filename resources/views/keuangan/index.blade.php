@@ -14,11 +14,36 @@
 
 <x-flash />
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
     <x-stat label="Saldo Kas" value="Rp {{ number_format($saldo) }}" icon="wallet" tone="brand" />
     <x-stat label="Total Pemasukan" value="Rp {{ number_format($totalMasuk) }}" icon="arrow-up" tone="success" />
     <x-stat label="Total Pengeluaran" value="Rp {{ number_format($totalKeluar) }}" icon="arrow-down" tone="danger" />
 </div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+    <x-stat label="Pemasukan Bulan Ini" value="Rp {{ number_format($masukBulanIni) }}" icon="arrow-up" tone="success" />
+    <x-stat label="Pengeluaran Bulan Ini" value="Rp {{ number_format($keluarBulanIni) }}" icon="arrow-down" tone="danger" />
+</div>
+
+{{-- Grafik keuangan untuk semua role --}}
+<x-card class="mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div>
+            <h2 class="font-semibold text-zinc-900">Grafik Kas RW</h2>
+            <p class="text-xs text-zinc-500">Perkembangan kas 12 bulan terakhir.</p>
+        </div>
+        <div class="hidden sm:flex gap-1 rounded-lg bg-zinc-100 p-1 text-xs font-semibold">
+            <button type="button" data-chart-view="bar"
+                    class="chart-toggle px-3 h-8 rounded-md bg-white shadow-sm text-zinc-900">Bulanan</button>
+            <button type="button" data-chart-view="line"
+                    class="chart-toggle px-3 h-8 rounded-md text-zinc-600">Saldo Berjalan</button>
+        </div>
+    </div>
+
+    <div class="relative" style="height: 300px;">
+        <canvas id="chartKeuanganWarga"></canvas>
+    </div>
+</x-card>
 
 <x-card>
     <div class="flex items-center justify-between mb-4">
@@ -127,21 +152,119 @@
 </x-card>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
 <script>
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-        const f = this.dataset.filter;
-        document.querySelectorAll('.filter-btn').forEach(b => {
-            b.classList.remove('bg-brand-700', 'text-white', 'bg-white', 'shadow-sm');
-            b.classList.add('text-zinc-600');
-        });
-        this.classList.add('bg-brand-700', 'text-white');
-        this.classList.remove('text-zinc-600');
+document.addEventListener('DOMContentLoaded', function () {
+    // Filter chip
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const f = this.dataset.filter;
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('bg-brand-700', 'text-white', 'bg-white', 'shadow-sm');
+                b.classList.add('text-zinc-600');
+            });
+            this.classList.add('bg-brand-700', 'text-white');
+            this.classList.remove('text-zinc-600');
 
-        document.querySelectorAll('.trx-row').forEach(r => {
-            r.style.display = (f === 'semua' || r.dataset.tipe === f) ? '' : 'none';
+            document.querySelectorAll('.trx-row').forEach(r => {
+                r.style.display = (f === 'semua' || r.dataset.tipe === f) ? '' : 'none';
+            });
         });
     });
+
+    // Chart
+    const startChart = () => {
+        if (typeof Chart === 'undefined') return setTimeout(startChart, 50);
+
+        const chartData = @json($chart);
+        const ctx = document.getElementById('chartKeuanganWarga');
+        if (!ctx) return;
+
+        const colors = {
+            masuk: '#3a8567', keluar: '#dc2626', saldo: '#1f5fa6',
+            grid: '#e4e4e7', text: '#52525b',
+        };
+
+        const baseScales = {
+            x: { grid: { display: false }, ticks: { color: colors.text, font: { size: 11 } } },
+            y: {
+                beginAtZero: true,
+                grid: { color: colors.grid },
+                ticks: {
+                    color: colors.text,
+                    font: { size: 11 },
+                    callback: (v) => {
+                        if (v >= 1e6) return (v / 1e6) + ' jt';
+                        if (v >= 1e3) return (v / 1e3) + ' rb';
+                        return v;
+                    },
+                },
+            },
+        };
+
+        let chart;
+        function render(view) {
+            if (chart) chart.destroy();
+            if (view === 'line') {
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: 'Saldo Berjalan',
+                            data: chartData.saldoRunning,
+                            borderColor: colors.saldo,
+                            backgroundColor: 'rgba(31,95,166,0.10)',
+                            borderWidth: 2.5,
+                            fill: true, tension: 0.35,
+                            pointRadius: 4, pointBackgroundColor: '#fff',
+                            pointBorderColor: colors.saldo, pointBorderWidth: 2,
+                        }],
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: baseScales,
+                    },
+                });
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [
+                            { label: 'Pemasukan', data: chartData.pemasukan, backgroundColor: colors.masuk, borderRadius: 6, maxBarThickness: 24 },
+                            { label: 'Pengeluaran', data: chartData.pengeluaran, backgroundColor: colors.keluar, borderRadius: 6, maxBarThickness: 24 },
+                        ],
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: colors.text, boxWidth: 12, boxHeight: 12, font: { size: 12, weight: '600' }, padding: 14 },
+                            },
+                        },
+                        scales: baseScales,
+                    },
+                });
+            }
+        }
+        render('bar');
+
+        document.querySelectorAll('.chart-toggle').forEach((btn) => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.chart-toggle').forEach((b) => {
+                    b.classList.remove('bg-white', 'shadow-sm', 'text-zinc-900');
+                    b.classList.add('text-zinc-600');
+                });
+                this.classList.add('bg-white', 'shadow-sm', 'text-zinc-900');
+                this.classList.remove('text-zinc-600');
+                render(this.dataset.chartView);
+            });
+        });
+    };
+    startChart();
 });
 </script>
 @endpush

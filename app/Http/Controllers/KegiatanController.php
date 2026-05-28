@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kegiatan;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class KegiatanController extends Controller
 {
+    public function __construct(protected NotifikasiService $notifikasi) {}
+
     public function index()
     {
         $kegiatans = Kegiatan::latest()->get();
@@ -35,7 +38,7 @@ class KegiatanController extends Controller
             $gambar = $request->file('gambar')->store('kegiatan', 'public');
         }
 
-        Kegiatan::create([
+        $kegiatan = Kegiatan::create([
             'judul'     => $validated['judul'],
             'slug'      => Str::slug($validated['judul']).'-'.Str::lower(Str::random(5)),
             'deskripsi' => $validated['deskripsi'],
@@ -44,7 +47,13 @@ class KegiatanController extends Controller
             'gambar'    => $gambar,
         ]);
 
-        return redirect('/kegiatan')->with('success', 'Kegiatan berhasil ditambahkan.');
+        try {
+            $this->notifikasi->broadcastKegiatanBaru($kegiatan);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return redirect('/kegiatan')->with('success', 'Kegiatan berhasil ditambahkan dan notifikasi WA dikirim.');
     }
 
     public function show(Kegiatan $kegiatan)

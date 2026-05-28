@@ -21,10 +21,12 @@
     </header>
 
     <main class="flex-1 flex items-center justify-center py-8">
-        <div class="w-full container-page max-w-md">
+        <div class="w-full container-page max-w-xl">
             @yield('content')
         </div>
     </main>
+
+    @stack('scripts')
 
     <footer class="border-t border-zinc-200 bg-white">
         <div class="container-page py-4 text-xs text-zinc-500 text-center">

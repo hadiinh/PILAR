@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    // Show login form
     public function showLogin()
     {
         if (auth()->check()) {
@@ -18,55 +18,48 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    // Show register form
-    public function showRegister()
-    {
-        if (auth()->check()) {
-            return redirect('/beranda');
-        }
-        return view('auth.register');
-    }
-
-    // Handle login
+    /**
+     * Login berbasis NIK.
+     * Rate limit: 5 percobaan per menit per (NIK + IP).
+     */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
+        $validated = $request->validate([
+            'nik'      => 'required|string|digits:16',
+            'password' => 'required|string',
+        ], [
+            'nik.required' => 'NIK wajib diisi.',
+            'nik.digits'   => 'NIK harus terdiri dari 16 angka.',
         ]);
 
+        $key = 'login:' . $validated['nik'] . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            throw ValidationException::withMessages([
+                'nik' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
+            ]);
+        }
+
+        $credentials = [
+            'nik'        => $validated['nik'],
+            'password'   => $validated['password'],
+            'akun_aktif' => true,
+        ];
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            RateLimiter::clear($key);
             $request->session()->regenerate();
             return redirect('/beranda')->with('success', 'Anda berhasil masuk.');
         }
 
+        RateLimiter::hit($key, 60);
+
         return back()->withErrors([
-            'email' => 'Email atau kata sandi salah.'
-        ])->onlyInput('email');
+            'nik' => 'NIK atau kata sandi salah, atau akun belum aktif.',
+        ])->onlyInput('nik');
     }
 
-    // Handle register
-    public function register(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|min:3|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6|confirmed'
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
-
-        $user->role = 'user';
-        $user->save();
-
-        return redirect('/login')->with('success', 'Pendaftaran berhasil. Silakan masuk dengan akun Anda.');
-    }
-
-    // Handle logout
     public function logout(Request $request)
     {
         Auth::logout();
