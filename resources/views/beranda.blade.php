@@ -89,17 +89,25 @@
         @endforelse
     </x-card>
 
+    <div class="hidden md:block">
     <x-card>
         <div class="flex items-center justify-between mb-4">
             <h2 class="font-semibold text-zinc-900">Dokumentasi</h2>
-            <a href="{{ url('/foto') }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800">Lihat semua</a>
+
+            <a href="{{ url('/foto') }}"
+               class="text-sm font-semibold text-brand-700 hover:text-brand-800">
+                Lihat semua
+            </a>
         </div>
+
         @if(count($recent_fotos) > 0)
             <div class="grid grid-cols-2 gap-2">
                 @foreach($recent_fotos->take(4) as $f)
                     <a href="{{ url('/foto/'.$f->id) }}" class="block">
                         <div class="aspect-square overflow-hidden rounded-lg bg-zinc-100">
-                            <img src="{{ asset('storage/'.$f->gambar) }}" alt="{{ $f->judul }}" class="w-full h-full object-cover">
+                            <img src="{{ asset('storage/'.$f->gambar) }}"
+                                 alt="{{ $f->judul }}"
+                                 class="w-full h-full object-cover">
                         </div>
                     </a>
                 @endforeach
@@ -108,6 +116,7 @@
             <x-empty-state icon="image" title="Belum ada foto" />
         @endif
     </x-card>
+</div>
 </div>
 
 {{-- Pengurus --}}

@@ -17,9 +17,52 @@
 @endif
 
 <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
-    <x-stat label="Baru" value="{{ $countBaru ?? 0 }}" icon="alert" tone="warning" />
-    <x-stat label="Diproses" value="{{ $countDiproses ?? 0 }}" icon="clock" tone="info" />
-    <x-stat label="Selesai" value="{{ $countSelesai ?? 0 }}" icon="check-circle" tone="success" />
+
+    {{-- Baru --}}
+    <div class="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm min-h-[110px] flex flex-col items-center justify-center text-center gap-2">
+        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+            <x-icon name="alert" class="w-5 h-5" />
+        </div>
+
+        <p class="text-2xl font-bold text-zinc-900">
+            {{ $countBaru ?? 0 }}
+        </p>
+
+        <p class="text-xs font-semibold text-zinc-500">
+            Baru
+        </p>
+    </div>
+
+    {{-- Diproses --}}
+    <div class="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm min-h-[110px] flex flex-col items-center justify-center text-center gap-2">
+        <div class="w-10 h-10 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center">
+            <x-icon name="clock" class="w-5 h-5" />
+        </div>
+
+        <p class="text-2xl font-bold text-zinc-900">
+            {{ $countDiproses ?? 0 }}
+        </p>
+
+        <p class="text-xs font-semibold text-zinc-500">
+            Diproses
+        </p>
+    </div>
+
+    {{-- Selesai --}}
+    <div class="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm min-h-[110px] flex flex-col items-center justify-center text-center gap-2">
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <x-icon name="check-circle" class="w-5 h-5" />
+        </div>
+
+        <p class="text-2xl font-bold text-zinc-900">
+            {{ $countSelesai ?? 0 }}
+        </p>
+
+        <p class="text-xs font-semibold text-zinc-500">
+            Selesai
+        </p>
+    </div>
+
 </div>
 
 <x-card>
