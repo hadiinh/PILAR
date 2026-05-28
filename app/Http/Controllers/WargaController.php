@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\FonnteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -93,7 +94,15 @@ class WargaController extends Controller
         if ($warga->id === auth()->id()) {
             return back()->withErrors(['error' => 'Anda tidak bisa menonaktifkan akun sendiri.']);
         }
+
         $warga->update(['akun_aktif' => false]);
+
+        // Kirim notifikasi WhatsApp jika user punya nomor HP dan notif aktif
+        if ($warga->bisaTerimaWa()) {
+            $pesan = "Yth. {$warga->name}, akun Sistem RW Anda telah dinonaktifkan oleh Admin/RW. Jika merasa ini keliru, silakan hubungi pengurus RW.";
+            app(FonnteService::class)->kirim($warga->no_hp, $pesan, 'akun_dinonaktifkan', $warga);
+        }
+
         return back()->with('success', 'Akun warga dinonaktifkan.');
     }
 
@@ -101,6 +110,28 @@ class WargaController extends Controller
     {
         $warga->update(['akun_aktif' => true]);
         return back()->with('success', 'Akun warga diaktifkan.');
+    }
+
+    public function destroy(User $warga)
+    {
+        if ($warga->id === auth()->id()) {
+            return back()->withErrors(['error' => 'Anda tidak bisa menghapus akun sendiri.']);
+        }
+
+        // Kirim notifikasi WhatsApp sebelum soft delete (agar bisa baca no_hp)
+        if ($warga->bisaTerimaWa()) {
+            $pesan = "Yth. {$warga->name}, akun Sistem RW Anda telah dihapus oleh Admin/RW. Jika merasa ini keliru, silakan hubungi pengurus RW.";
+            try {
+                app(FonnteService::class)->kirim($warga->no_hp, $pesan, 'akun_dihapus', $warga);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        // Soft delete - menjaga data history tetap ada
+        $warga->delete();
+
+        return back()->with('success', "Akun {$warga->name} berhasil dihapus.");
     }
 
     public function resetPassword(User $warga)

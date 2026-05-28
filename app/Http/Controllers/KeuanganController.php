@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Keuangan;
+use App\Models\User;
+use App\Services\FonnteService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -49,7 +51,26 @@ class KeuanganController extends Controller
             'deskripsi' => 'nullable|string|max:1000',
         ]);
 
-        Keuangan::create($validated);
+        $keuangan = Keuangan::create($validated);
+
+        // Kirim notifikasi WhatsApp ke semua warga aktif yang bisa terima notifikasi
+        $fonnte = app(FonnteService::class);
+        $waraAktif = User::where('akun_aktif', true)
+            ->where('role', 'user')
+            ->where('notif_wa_aktif', true)
+            ->whereNotNull('no_hp')
+            ->get();
+
+        if ($waraAktif->isNotEmpty()) {
+            $nominal = 'Rp ' . number_format($validated['jumlah'], 0, ',', '.');
+            $pesan = "Info Sistem RW: Telah ditambahkan data keuangan baru oleh Admin/RW.\n"
+                . "Keterangan: {$validated['judul']}\n"
+                . "Nominal: {$nominal}\n"
+                . "Tanggal: " . Carbon::parse($validated['tanggal'])->translatedFormat('d F Y') . "\n"
+                . "Silakan cek aplikasi untuk detail lengkap.";
+
+            $fonnte->kirimKeUsers($waraAktif, $pesan, 'keuangan_baru');
+        }
 
         return redirect('/keuangan')->with('success', 'Transaksi berhasil ditambahkan.');
     }

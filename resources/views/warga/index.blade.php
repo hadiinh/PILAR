@@ -89,6 +89,13 @@
                                 <button class="text-xs font-semibold text-emerald-700 hover:underline">Aktifkan</button>
                             </form>
                         @endif
+                        <span class="text-zinc-300">·</span>
+                        <form action="{{ route('warga.destroy', $u) }}" method="POST" class="inline"
+                              onsubmit="return confirm('Hapus akun {{ $u->name }} secara permanen? Tindakan ini tidak dapat dibatalkan!');">
+                            @csrf
+                            @method('DELETE')
+                            <button class="text-xs font-semibold text-red-600 hover:underline">Hapus Akun</button>
+                        </form>
                     </div>
                 </li>
             @endforeach
@@ -172,6 +179,12 @@
                                             <button class="inline-flex items-center gap-1 px-2 h-8 text-xs font-semibold rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50">Aktifkan</button>
                                         </form>
                                     @endif
+                                    <form action="{{ route('warga.destroy', $u) }}" method="POST"
+                                          onsubmit="return confirm('Hapus akun {{ $u->name }} secara permanen? Tindakan ini tidak dapat dibatalkan!');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="inline-flex items-center gap-1 px-2 h-8 text-xs font-semibold rounded-lg border border-red-200 text-red-700 hover:bg-red-50">Hapus</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

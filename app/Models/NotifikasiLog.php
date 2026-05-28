@@ -31,6 +31,9 @@ class NotifikasiLog extends Model
             'laporan_status'       => 'Status Laporan',
             'pengajuan_disetujui'  => 'Pengajuan Disetujui',
             'pengajuan_ditolak'    => 'Pengajuan Ditolak',
+            'akun_dinonaktifkan'   => 'Akun Dinonaktifkan',
+            'akun_dihapus'         => 'Akun Dihapus',
+            'keuangan_baru'        => 'Keuangan Baru',
             'manual'               => 'Manual',
             default                => ucwords(str_replace('_', ' ', $this->jenis)),
         };

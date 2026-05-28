@@ -60,7 +60,7 @@ Route::prefix('api/wilayah')->name('wilayah.')->group(function () {
 | Beranda + profile
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'check_account_active'])->group(function () {
 
     Route::get('/beranda', function () {
         $masuk  = (int) Keuangan::where('tipe', 'masuk')->sum('jumlah');
@@ -114,6 +114,7 @@ Route::middleware(['auth', 'role:ketua_rw,admin'])->group(function () {
     Route::post('/warga',                      [WargaController::class, 'store'])->name('warga.store');
     Route::get('/warga/{warga}/edit',          [WargaController::class, 'edit'])->name('warga.edit');
     Route::put('/warga/{warga}',               [WargaController::class, 'update'])->name('warga.update');
+    Route::delete('/warga/{warga}',            [WargaController::class, 'destroy'])->name('warga.destroy');
     Route::post('/warga/{warga}/deactivate',   [WargaController::class, 'deactivate'])->name('warga.deactivate');
     Route::post('/warga/{warga}/activate',     [WargaController::class, 'activate'])->name('warga.activate');
     Route::post('/warga/{warga}/reset-password', [WargaController::class, 'resetPassword'])->name('warga.resetPassword');
@@ -145,7 +146,7 @@ Route::middleware(['auth', 'role:ketua_rw,admin'])->group(function () {
 | Modul utama (warga lihat / buat)
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'check_account_active'])->group(function () {
 
     Route::get('/jadwal',          [JadwalController::class, 'index'])->name('jadwal.index');
     Route::get('/jadwal/{jadwal}', [JadwalController::class, 'show'])->name('jadwal.show')->whereNumber('jadwal');
