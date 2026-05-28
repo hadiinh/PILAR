@@ -49,22 +49,22 @@
         </div>
     </div>
 
-    <div class="relative" style="height: 320px;">
+    <div class="relative h-64 sm:h-80">
         <canvas id="chartKeuangan"></canvas>
     </div>
 
     <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-zinc-200 text-center">
-        <div>
+        <div class="min-w-0">
             <p class="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Pemasukan</p>
-            <p class="text-sm font-bold text-emerald-700">Rp {{ number_format(array_sum($chart['pemasukan'])) }}</p>
+            <p class="text-xs sm:text-sm font-bold text-emerald-700 truncate">Rp {{ number_format(array_sum($chart['pemasukan'])) }}</p>
         </div>
-        <div>
+        <div class="min-w-0">
             <p class="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Pengeluaran</p>
-            <p class="text-sm font-bold text-red-700">Rp {{ number_format(array_sum($chart['pengeluaran'])) }}</p>
+            <p class="text-xs sm:text-sm font-bold text-red-700 truncate">Rp {{ number_format(array_sum($chart['pengeluaran'])) }}</p>
         </div>
-        <div>
+        <div class="min-w-0">
             <p class="text-[11px] text-zinc-500 font-semibold uppercase tracking-wide">Saldo Akhir</p>
-            <p class="text-sm font-bold text-brand-700">Rp {{ number_format(end($chart['saldo']) ?: 0) }}</p>
+            <p class="text-xs sm:text-sm font-bold text-brand-700 truncate">Rp {{ number_format(end($chart['saldo']) ?: 0) }}</p>
         </div>
     </div>
 </x-card>

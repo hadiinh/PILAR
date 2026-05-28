@@ -39,7 +39,7 @@
     <x-card>
         <h3 class="font-semibold text-zinc-900 mb-1">Kategori Umur</h3>
         <p class="text-xs text-zinc-500 mb-3">Distribusi warga berdasarkan kelompok umur.</p>
-        <div class="relative" style="height: 280px;">
+        <div class="relative h-56 sm:h-72">
             <canvas id="chartKategori"></canvas>
         </div>
     </x-card>
@@ -47,7 +47,7 @@
     <x-card>
         <h3 class="font-semibold text-zinc-900 mb-1">Jenis Kelamin</h3>
         <p class="text-xs text-zinc-500 mb-3">Perbandingan laki-laki dan perempuan.</p>
-        <div class="relative" style="height: 280px;">
+        <div class="relative h-56 sm:h-72">
             <canvas id="chartGender"></canvas>
         </div>
     </x-card>
@@ -57,7 +57,7 @@
     <x-card>
         <h3 class="font-semibold text-zinc-900 mb-1">Status Akun</h3>
         <p class="text-xs text-zinc-500 mb-3">Akun aktif, nonaktif, dan pengajuan menunggu.</p>
-        <div class="relative" style="height: 280px;">
+        <div class="relative h-56 sm:h-72">
             <canvas id="chartAkun"></canvas>
         </div>
     </x-card>
@@ -65,7 +65,7 @@
     <x-card>
         <h3 class="font-semibold text-zinc-900 mb-1">Warga per RT</h3>
         <p class="text-xs text-zinc-500 mb-3">Jumlah warga di setiap RT.</p>
-        <div class="relative" style="height: 280px;">
+        <div class="relative h-56 sm:h-72">
             <canvas id="chartRt"></canvas>
         </div>
     </x-card>
@@ -74,7 +74,7 @@
 <x-card class="mb-4">
     <h3 class="font-semibold text-zinc-900 mb-1">Pertumbuhan Pengguna</h3>
     <p class="text-xs text-zinc-500 mb-3">Penambahan akun terdaftar 12 bulan terakhir.</p>
-    <div class="relative" style="height: 280px;">
+    <div class="relative h-56 sm:h-72">
         <canvas id="chartGrowth"></canvas>
     </div>
 </x-card>

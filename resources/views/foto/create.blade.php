@@ -30,7 +30,7 @@
 
             <div id="previewWrap" class="hidden mt-3">
                 <p class="text-xs text-zinc-500 mb-1">Pratinjau</p>
-                <img id="previewImg" alt="" class="max-h-60 rounded-lg border border-zinc-200">
+                <img id="previewImg" alt="" class="max-h-60 max-w-full h-auto rounded-lg border border-zinc-200">
             </div>
         </div>
 

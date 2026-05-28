@@ -8,7 +8,7 @@
 
 <x-flash />
 
-<div class="grid grid-cols-3 gap-3 mb-6">
+<div class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
     <x-stat label="Menunggu" value="{{ $stats['pending'] }}" icon="clock" tone="warning" />
     <x-stat label="Disetujui" value="{{ $stats['disetujui'] }}" icon="check" tone="success" />
     <x-stat label="Ditolak" value="{{ $stats['ditolak'] }}" icon="close" tone="danger" />
@@ -16,7 +16,7 @@
 
 <x-card>
     <form method="GET" class="flex flex-col sm:flex-row gap-2 mb-4">
-        <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 text-xs font-semibold">
+        <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 text-xs font-semibold overflow-x-auto no-scrollbar">
             @php
                 $tabs = [
                     ''          => 'Semua',
@@ -27,17 +27,17 @@
             @endphp
             @foreach($tabs as $v => $label)
                 <a href="{{ route('pengajuan.index', array_filter(['status' => $v, 'q' => $q])) }}"
-                   class="px-3 h-8 inline-flex items-center rounded-md {{ $status === $v ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600' }}">
+                   class="px-3 h-8 inline-flex items-center rounded-md whitespace-nowrap {{ $status === $v ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600' }}">
                     {{ $label }}
                 </a>
             @endforeach
         </div>
-        <div class="flex-1 flex gap-2">
+        <div class="flex-1 flex gap-2 min-w-0">
             <input type="text" name="q" value="{{ $q }}"
                    placeholder="Cari NIK / nama / no HP"
-                   class="flex-1 h-9 px-3 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                   class="flex-1 min-w-0 h-9 px-3 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
             <input type="hidden" name="status" value="{{ $status }}">
-            <button type="submit" class="px-3 h-9 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold">Cari</button>
+            <button type="submit" class="shrink-0 px-3 h-9 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold">Cari</button>
         </div>
     </form>
 

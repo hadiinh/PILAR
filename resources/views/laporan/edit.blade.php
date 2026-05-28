@@ -19,7 +19,7 @@
             <p class="text-sm text-zinc-700">{{ $laporan->deskripsi }}</p>
         @endif
         @if($laporan->foto)
-            <img src="{{ asset('storage/'.$laporan->foto) }}" alt="" class="mt-2 max-h-48 rounded-lg border border-zinc-200">
+            <img src="{{ asset('storage/'.$laporan->foto) }}" alt="" class="mt-2 max-h-48 max-w-full h-auto rounded-lg border border-zinc-200">
         @endif
     </div>
 

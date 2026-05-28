@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <div class="relative" style="height: 300px;">
+    <div class="relative h-64 sm:h-72 md:h-80">
         <canvas id="chartKeuanganWarga"></canvas>
     </div>
 </x-card>

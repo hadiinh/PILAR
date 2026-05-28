@@ -45,7 +45,7 @@
 
     @if($laporan->foto)
         <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">Foto Bukti</h4>
-        <img src="{{ asset('storage/'.$laporan->foto) }}" alt="" class="max-h-96 rounded-lg border border-zinc-200">
+        <img src="{{ asset('storage/'.$laporan->foto) }}" alt="" class="max-h-96 max-w-full h-auto rounded-lg border border-zinc-200">
     @endif
 </x-card>
 @endsection

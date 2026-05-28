@@ -13,7 +13,7 @@
 
         <div>
             <p class="text-xs font-semibold uppercase text-zinc-500 mb-2">Foto saat ini</p>
-            <img src="{{ asset('storage/'.$foto->gambar) }}" alt="" class="max-h-60 rounded-lg border border-zinc-200">
+            <img src="{{ asset('storage/'.$foto->gambar) }}" alt="" class="max-h-60 max-w-full h-auto rounded-lg border border-zinc-200">
         </div>
 
         <x-input name="judul" label="Judul Foto" :value="$foto->judul" required />
@@ -32,7 +32,7 @@
             <input type="file" name="gambar" id="inputGambar" accept="image/*"
                    class="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-zinc-200">
             <div id="previewWrap" class="hidden mt-3">
-                <img id="previewImg" alt="" class="max-h-60 rounded-lg border border-zinc-200">
+                <img id="previewImg" alt="" class="max-h-60 max-w-full h-auto rounded-lg border border-zinc-200">
             </div>
         </div>
 

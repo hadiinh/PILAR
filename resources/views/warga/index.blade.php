@@ -33,7 +33,7 @@
             <option value="0" @selected($aktif==='0')>Nonaktif</option>
         </select>
         <div class="sm:col-span-4">
-            <x-button type="submit" variant="primary" icon="search">Cari</x-button>
+            <x-button type="submit" variant="primary" icon="search" class="w-full sm:w-auto">Cari</x-button>
         </div>
     </form>
 
@@ -67,7 +67,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex gap-1 pt-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
                         <a href="{{ route('warga.edit', $u) }}" class="text-xs font-semibold text-brand-700 hover:underline">Edit</a>
                         <span class="text-zinc-300">·</span>
                         <form action="{{ route('warga.resetPassword', $u) }}" method="POST" class="inline"

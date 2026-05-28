@@ -8,7 +8,7 @@
 
 <x-flash />
 
-<div class="grid grid-cols-3 gap-3 mb-6">
+<div class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
     <x-stat label="Total KK" value="{{ $stats['total_kk'] }}" icon="users" tone="brand" />
     <x-stat label="Total Anggota" value="{{ $stats['total_anggota'] }}" icon="user" tone="info" />
     <x-stat label="Kepala Keluarga" value="{{ $stats['kepala'] }}" icon="check" tone="success" />
@@ -17,8 +17,8 @@
 <x-card>
     <form method="GET" class="flex gap-2 mb-4">
         <input type="text" name="q" value="{{ $q }}" placeholder="Cari No KK atau nama anggota"
-               class="flex-1 h-10 px-3 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-        <button type="submit" class="px-4 h-10 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold">Cari</button>
+               class="flex-1 min-w-0 h-10 px-3 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        <button type="submit" class="shrink-0 px-4 h-10 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold">Cari</button>
     </form>
 
     @if($items->isEmpty())

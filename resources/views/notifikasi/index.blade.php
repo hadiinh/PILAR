@@ -8,7 +8,7 @@
 
 <x-flash />
 
-<div class="grid grid-cols-3 gap-3 mb-6">
+<div class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
     <x-stat label="Total Pengiriman" value="{{ $stats['total'] }}" icon="message" tone="brand" />
     <x-stat label="Terkirim" value="{{ $stats['terkirim'] }}" icon="check" tone="success" />
     <x-stat label="Gagal" value="{{ $stats['gagal'] }}" icon="close" tone="danger" />
@@ -30,14 +30,51 @@
             @endforeach
         </select>
         <div class="sm:col-span-4">
-            <x-button type="submit" variant="primary" icon="search">Cari</x-button>
+            <x-button type="submit" variant="primary" icon="search" class="w-full sm:w-auto">Cari</x-button>
         </div>
     </form>
 
     @if($items->isEmpty())
         <x-empty-state icon="message" title="Belum ada riwayat notifikasi" />
     @else
-        <div class="overflow-x-auto -mx-2">
+        {{-- Mobile cards --}}
+        <ul class="md:hidden divide-y divide-zinc-100">
+            @foreach($items as $log)
+                <li class="py-3 space-y-1.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-zinc-900 truncate">{{ $log->user?->name ?? '—' }}</p>
+                            <p class="text-xs text-zinc-500 font-mono truncate">{{ $log->nomor_tujuan }}</p>
+                        </div>
+                        @if($log->status === 'terkirim')
+                            <x-badge variant="success">Terkirim</x-badge>
+                        @else
+                            <x-badge variant="danger">Gagal</x-badge>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <x-badge variant="neutral">{{ $log->jenisLabel() }}</x-badge>
+                        <span class="text-[11px] text-zinc-500">{{ $log->created_at->translatedFormat('d M Y H:i') }}</span>
+                        @if($log->retry_count > 0)
+                            <span class="text-[11px] text-zinc-500">· Retry {{ $log->retry_count }}x</span>
+                        @endif
+                    </div>
+                    <p class="text-xs text-zinc-600 line-clamp-2 whitespace-pre-line">{{ $log->pesan }}</p>
+                    @if($log->error)
+                        <p class="text-[11px] text-red-600"><span class="font-semibold">Error:</span> {{ \Illuminate\Support\Str::limit($log->error, 100) }}</p>
+                    @endif
+                    @if($log->status === 'gagal')
+                        <form action="{{ route('notifikasi.retry', $log) }}" method="POST" class="pt-1">
+                            @csrf
+                            <button class="inline-flex items-center gap-1 px-3 h-8 text-xs font-semibold rounded-lg border border-zinc-200 hover:bg-zinc-50">Kirim Ulang</button>
+                        </form>
+                    @endif
+                </li>
+            @endforeach
+        </ul>
+
+        {{-- Desktop table --}}
+        <div class="hidden md:block overflow-x-auto -mx-2">
             <table class="w-full text-sm">
                 <thead class="text-left text-zinc-500">
                     <tr class="border-b border-zinc-200">

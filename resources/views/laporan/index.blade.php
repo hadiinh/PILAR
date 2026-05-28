@@ -16,7 +16,7 @@
     <x-alert variant="success" class="mb-4">{{ session('laporan_success') }}</x-alert>
 @endif
 
-<div class="grid grid-cols-3 gap-2 mb-5">
+<div class="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
     <x-stat label="Baru" value="{{ $countBaru ?? 0 }}" icon="alert" tone="warning" />
     <x-stat label="Diproses" value="{{ $countDiproses ?? 0 }}" icon="clock" tone="info" />
     <x-stat label="Selesai" value="{{ $countSelesai ?? 0 }}" icon="check-circle" tone="success" />
