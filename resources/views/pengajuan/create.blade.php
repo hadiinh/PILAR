@@ -44,7 +44,8 @@
         <x-input name="password"
                  type="password"
                  label="Kata Sandi yang Diinginkan"
-                 placeholder="Minimal 6 karakter"
+                 placeholder="Contoh: MyPassword@123"
+                 hint="Minimal 8 karakter, 1 huruf besar, 1 huruf kecil, 1 angka, 1 simbol (!@#$%^&*)"
                  required
                  autocomplete="new-password" />
 
@@ -55,6 +56,14 @@
                  required
                  autocomplete="new-password" />
 
+        {{-- reCAPTCHA v2 Checkbox --}}
+        <div class="flex justify-center py-2">
+            <div class="g-recaptcha" data-sitekey="{{ $recaptchaPublicKey }}"></div>
+        </div>
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+        @enderror
+
         <x-button type="submit" variant="primary" size="lg" block>Kirim Pengajuan</x-button>
     </form>
 
@@ -63,4 +72,8 @@
         <a href="{{ route('login') }}" class="font-semibold text-brand-700 hover:text-brand-800">Masuk di sini</a>
     </p>
 </x-card>
+
+@push('scripts')
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@endpush
 @endsection

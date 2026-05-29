@@ -58,7 +58,8 @@
                 <x-input name="password"
                          type="password"
                          label="Kata Sandi"
-                         placeholder="Minimal 6 karakter"
+                         placeholder="Contoh: MyPassword@123"
+                         hint="Min 8 karakter, 1 besar, 1 kecil, 1 angka, 1 simbol"
                          required
                          autocomplete="new-password" />
                 <x-input name="password_confirmation"
@@ -73,6 +74,14 @@
         {{-- Alamat --}}
         @include('partials.alamat-fields', ['user' => null, 'showHeader' => true])
 
+        {{-- reCAPTCHA v2 Checkbox --}}
+        <div class="flex justify-center py-2">
+            <div class="g-recaptcha" data-sitekey="{{ $recaptchaPublicKey ?? '' }}"></div>
+        </div>
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+        @enderror
+
         <x-button type="submit" variant="primary" size="lg" block>Daftar</x-button>
     </form>
 
@@ -83,6 +92,7 @@
 </x-card>
 
 @push('scripts')
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 @vite('resources/js/wilayah.js')
 @endpush
 @endsection

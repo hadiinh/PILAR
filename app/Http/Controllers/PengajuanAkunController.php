@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\PengajuanAkun;
 use App\Models\User;
+use App\Rules\StrongPassword;
 use App\Services\NotifikasiService;
+use App\Services\RecaptchaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class PengajuanAkunController extends Controller
 {
-    public function __construct(protected NotifikasiService $notifikasi) {}
+    public function __construct(
+        protected NotifikasiService $notifikasi,
+        protected RecaptchaService $recaptcha
+    ) {}
 
     /* =====================================================
      | Bagian publik (warga calon pengguna)
@@ -21,11 +26,23 @@ class PengajuanAkunController extends Controller
 
     public function create()
     {
-        return view('pengajuan.create');
+        return view('pengajuan.create', [
+            'recaptchaPublicKey' => $this->recaptcha->getPublicKey(),
+        ]);
     }
 
     public function store(Request $request)
     {
+        // Verifikasi reCAPTCHA terlebih dahulu
+        $recaptchaResponse = $request->string('g-recaptcha-response')->toString();
+        if (!$this->recaptcha->verify($recaptchaResponse, $request->ip())) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'g-recaptcha-response' => 'Verifikasi reCAPTCHA gagal. Silakan coba lagi.',
+                ]);
+        }
+
         // Rate limit per IP supaya tidak diabuse
         $key = 'pengajuan:' . $request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
@@ -39,13 +56,15 @@ class PengajuanAkunController extends Controller
         $validated = $request->validate([
             'nik'                   => 'required|string|digits:16',
             'no_hp'                 => 'required|string|max:20|regex:/^[0-9+\-\s()]+$/',
-            'password'              => 'required|string|min:6|confirmed',
+            'password'              => ['required', 'string', 'confirmed', new StrongPassword()],
             'password_confirmation' => 'required|string',
+            'g-recaptcha-response'  => 'required|string',
         ], [
             'nik.required'  => 'NIK wajib diisi.',
             'nik.digits'    => 'NIK harus terdiri dari 16 angka.',
             'no_hp.regex'   => 'Format nomor HP tidak valid.',
             'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+            'g-recaptcha-response.required' => 'Silakan verifikasi reCAPTCHA terlebih dahulu.',
         ]);
 
         // 1. NIK harus terdaftar sebagai warga

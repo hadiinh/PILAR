@@ -31,6 +31,14 @@
                  required
                  autocomplete="current-password" />
 
+        {{-- reCAPTCHA v2 Checkbox --}}
+        <div class="flex justify-center py-2">
+            <div class="g-recaptcha" data-sitekey="{{ $recaptchaPublicKey }}"></div>
+        </div>
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+        @enderror
+
         <label class="flex items-center gap-2 text-sm text-zinc-600">
             <input type="checkbox" name="remember" class="w-4 h-4 rounded border-zinc-300 text-brand-700 focus:ring-brand-500">
             Ingat saya di perangkat ini
@@ -56,4 +64,8 @@
         </div>
     @endenv
 </x-card>
+
+@push('scripts')
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@endpush
 @endsection
