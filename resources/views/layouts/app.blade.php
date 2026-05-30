@@ -94,10 +94,20 @@
         @auth
         <header class="lg:hidden sticky top-0 z-30 bg-white border-b border-zinc-200">
             <div class="px-4 h-14 flex items-center justify-between">
+                @if($isManager)
+                <button type="button"
+                        onclick="document.dispatchEvent(new CustomEvent('open-sidebar-mobile'))"
+                        class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        aria-label="Menu">
+                    <span class="w-8 h-8 rounded-lg bg-brand-700 text-white flex items-center justify-center font-bold text-sm">P</span>
+                    <span class="font-semibold text-zinc-900">PILAR RW 016</span>
+                </button>
+                @else
                 <a href="{{ url('/beranda') }}" class="flex items-center gap-2">
                     <span class="w-8 h-8 rounded-lg bg-brand-700 text-white flex items-center justify-center font-bold text-sm">P</span>
                     <span class="font-semibold text-zinc-900">PILAR RW 016</span>
                 </a>
+                @endif
                 <button type="button"
                         onclick="document.dispatchEvent(new CustomEvent('open-profile-modal'))"
                         class="w-9 h-9 rounded-full bg-zinc-100 text-zinc-700 flex items-center justify-center font-semibold"
@@ -139,6 +149,83 @@
     </div>
 </nav>
 
+{{-- Sidebar mobile (mobile only, managers only) --}}
+@auth
+@if($isManager)
+<div id="sidebarMobileBackdrop" class="lg:hidden fixed inset-0 bg-black/50 z-30 opacity-0 pointer-events-none transition-opacity duration-300" onclick="document.dispatchEvent(new CustomEvent('close-sidebar-mobile'))"></div>
+
+<aside id="sidebarMobile" class="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-zinc-200 z-40 transform -translate-x-full transition-transform duration-300 flex flex-col overflow-y-auto">
+    <div class="px-5 py-5 border-b border-zinc-200 flex-shrink-0">
+        <div class="flex items-center justify-between">
+            <a href="{{ url('/beranda') }}" class="flex items-center gap-3 flex-1">
+                <span class="w-9 h-9 rounded-lg bg-brand-700 text-white flex items-center justify-center font-bold">P</span>
+                <span class="flex flex-col leading-tight">
+                    <span class="font-semibold text-zinc-900">PILAR</span>
+                    <span class="text-xs text-zinc-500">RW 016 — Melong</span>
+                </span>
+            </a>
+            <button type="button"
+                    onclick="document.dispatchEvent(new CustomEvent('close-sidebar-mobile'))"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-zinc-100 text-zinc-500 hover:text-zinc-700"
+                    aria-label="Tutup menu">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        @php
+            $itemsMobile = [
+                ['label' => 'Beranda',     'href' => '/beranda',    'icon' => 'home',     'active' => $isActive('beranda')],
+                ['label' => 'Dashboard',   'href' => '/dashboard',  'icon' => 'building', 'active' => $isActive('dashboard'), 'show' => $isManager],
+                ['label' => 'Jadwal',      'href' => '/jadwal',     'icon' => 'calendar', 'active' => $isActive('jadwal')],
+                ['label' => 'Kegiatan',    'href' => '/kegiatan',   'icon' => 'megaphone','active' => $isActive('kegiatan')],
+                ['label' => 'Foto',        'href' => '/foto',       'icon' => 'image',    'active' => $isActive('foto')],
+                ['label' => 'Keuangan',    'href' => '/keuangan',   'icon' => 'wallet',   'active' => $isActive('keuangan')],
+                ['label' => 'Laporan',     'href' => '/laporan',    'icon' => 'flag',     'active' => $isActive('laporan')],
+                ['heading' => 'Manajemen', 'show' => $isManager],
+                ['label' => 'Manajemen Warga','href' => '/warga',   'icon' => 'users',    'active' => $isActive('warga'),       'show' => $isManager],
+                ['label' => 'Keluarga',    'href' => '/keluarga',   'icon' => 'users',    'active' => $isActive('keluarga'),    'show' => $isManager],
+                ['label' => 'Statistik',   'href' => '/statistik',  'icon' => 'building', 'active' => $isActive('statistik'),   'show' => $isManager],
+                ['label' => 'Pengajuan Akun','href' => '/pengajuan','icon' => 'clock',    'active' => $isActive('pengajuan'),   'show' => $isManager],
+                ['label' => 'Notifikasi',  'href' => '/notifikasi', 'icon' => 'message',  'active' => $isActive('notifikasi'),  'show' => $isManager],
+            ];
+        @endphp
+        @foreach($itemsMobile as $it)
+            @if(isset($it['heading']))
+                @if(!isset($it['show']) || $it['show'])
+                    <p class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{{ $it['heading'] }}</p>
+                @endif
+            @elseif(!isset($it['show']) || $it['show'])
+                <a href="{{ url($it['href']) }}"
+                   onclick="document.dispatchEvent(new CustomEvent('close-sidebar-mobile'))"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ $it['active'] ? 'bg-brand-50 text-brand-800' : 'text-zinc-700 hover:bg-zinc-100' }}">
+                    <x-icon :name="$it['icon']" class="w-5 h-5 {{ $it['active'] ? 'text-brand-700' : 'text-zinc-500' }}" />
+                    {{ $it['label'] }}
+                </a>
+            @endif
+        @endforeach
+    </nav>
+
+    <div class="px-3 py-3 border-t border-zinc-200 flex-shrink-0">
+        <button type="button"
+                onclick="document.dispatchEvent(new CustomEvent('open-profile-modal')); document.dispatchEvent(new CustomEvent('close-sidebar-mobile'));"
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-100 text-left">
+            <span class="w-9 h-9 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center font-semibold">
+                {{ strtoupper(mb_substr($user->name ?? '?', 0, 1)) }}
+            </span>
+            <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold text-zinc-900 truncate">{{ $user->name }}</span>
+                <span class="block text-xs text-zinc-500 truncate">{{ ucwords(str_replace('_',' ', $user->role)) }}</span>
+            </span>
+        </button>
+    </div>
+</aside>
+@endif
+@endauth
+
 {{-- Profile modal (shared) --}}
 @include('partials.profile-modal')
 @endauth
@@ -179,6 +266,48 @@
         });
 
         document.addEventListener('open-profile-modal', function () { openModal(document.getElementById('profileModal')); });
+    })();
+
+    // Sidebar Mobile Control
+    (function () {
+        const sidebarMobile = document.getElementById('sidebarMobile');
+        const backdrop = document.getElementById('sidebarMobileBackdrop');
+
+        if (!sidebarMobile) return; // Hanya untuk managers
+
+        function openSidebarMobile() {
+            // Show backdrop: remove opacity-0 dan pointer-events-none
+            backdrop.classList.remove('opacity-0', 'pointer-events-none');
+            
+            // Show sidebar: slide in from left
+            sidebarMobile.classList.remove('-translate-x-full');
+            sidebarMobile.classList.add('translate-x-0');
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebarMobile() {
+            // Hide backdrop: add opacity-0 dan pointer-events-none
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            
+            // Hide sidebar: slide out to left
+            sidebarMobile.classList.add('-translate-x-full');
+            sidebarMobile.classList.remove('translate-x-0');
+            
+            // Allow body scroll
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('open-sidebar-mobile', openSidebarMobile);
+        document.addEventListener('close-sidebar-mobile', closeSidebarMobile);
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && sidebarMobile.classList.contains('translate-x-0')) {
+                closeSidebarMobile();
+            }
+        });
     })();
 </script>
 
