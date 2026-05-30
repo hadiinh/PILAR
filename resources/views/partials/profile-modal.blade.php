@@ -67,7 +67,46 @@
             <form action="{{ route('profile.changePassword') }}" method="POST" class="p-3 space-y-3 border-t border-zinc-200">
                 @csrf
                 <x-input name="password_lama" type="password" label="Kata Sandi Lama" required />
-                <x-input name="password_baru" type="password" label="Kata Sandi Baru" hint="Minimal 6 karakter" required />
+                
+                <div>
+                    <x-input name="password_baru" id="passwordBaru" type="password" label="Kata Sandi Baru" 
+                             hint="Minimal 8 karakter, 1 huruf besar, 1 huruf kecil, 1 angka, 1 simbol" required />
+                    
+                    {{-- Password Strength Indicator --}}
+                    <div id="passwordStrengthIndicator" class="mt-3 space-y-2 hidden">
+                        <div class="flex items-center gap-2 text-sm">
+                            <span id="minLength" class="flex items-center gap-1">
+                                <span class="text-red-500">✖</span>
+                                <span class="text-zinc-600">Minimal 8 karakter</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span id="hasUppercase" class="flex items-center gap-1">
+                                <span class="text-red-500">✖</span>
+                                <span class="text-zinc-600">1 huruf besar (A-Z)</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span id="hasLowercase" class="flex items-center gap-1">
+                                <span class="text-red-500">✖</span>
+                                <span class="text-zinc-600">1 huruf kecil (a-z)</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span id="hasNumber" class="flex items-center gap-1">
+                                <span class="text-red-500">✖</span>
+                                <span class="text-zinc-600">1 angka (0-9)</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span id="hasSymbol" class="flex items-center gap-1">
+                                <span class="text-red-500">✖</span>
+                                <span class="text-zinc-600">1 simbol (!@#$%^&*)</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 <x-input name="password_baru_confirmation" type="password" label="Ulangi Kata Sandi Baru" required />
                 <x-button type="submit" variant="primary" icon="check" block>Ubah Kata Sandi</x-button>
             </form>
@@ -79,3 +118,69 @@
         </form>
     </div>
 </x-modal>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('passwordBaru');
+    const indicator = document.getElementById('passwordStrengthIndicator');
+    
+    if (!passwordInput) return;
+
+    const requirements = {
+        minLength: { id: 'minLength', regex: /.{8,}/, icon: 'minLength' },
+        hasUppercase: { id: 'hasUppercase', regex: /[A-Z]/, icon: 'hasUppercase' },
+        hasLowercase: { id: 'hasLowercase', regex: /[a-z]/, icon: 'hasLowercase' },
+        hasNumber: { id: 'hasNumber', regex: /[0-9]/, icon: 'hasNumber' },
+        hasSymbol: { id: 'hasSymbol', regex: /[!@#$%^&*()_+\-=\[\]{};:'"<>,.?\/]/, icon: 'hasSymbol' }
+    };
+
+    function updateIndicator(value) {
+        // Show indicator when user starts typing
+        if (value.length > 0) {
+            indicator.classList.remove('hidden');
+        } else {
+            indicator.classList.add('hidden');
+            return;
+        }
+
+        // Check each requirement
+        for (let key in requirements) {
+            const req = requirements[key];
+            const element = document.getElementById(req.id);
+            const isMet = req.regex.test(value);
+            
+            const iconSpan = element.querySelector('span:first-child');
+            const textSpan = element.querySelector('span:nth-child(2)');
+            
+            if (isMet) {
+                // Change to checkmark and green color
+                iconSpan.textContent = '✔';
+                iconSpan.className = 'text-green-500';
+                element.className = 'flex items-center gap-1 text-green-600';
+            } else {
+                // Change to X and red color
+                iconSpan.textContent = '✖';
+                iconSpan.className = 'text-red-500';
+                element.className = 'flex items-center gap-1 text-zinc-600';
+            }
+        }
+    }
+
+    // Listen for input changes
+    passwordInput.addEventListener('input', function() {
+        updateIndicator(this.value);
+    });
+
+    // Listen for visibility toggle (when details element opens)
+    const detailsElement = passwordInput.closest('details');
+    if (detailsElement) {
+        detailsElement.addEventListener('toggle', function() {
+            if (this.open) {
+                updateIndicator(passwordInput.value);
+            }
+        });
+    }
+});
+</script>
+@endpush

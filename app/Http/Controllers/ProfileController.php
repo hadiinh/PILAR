@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\StrongPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -53,7 +54,7 @@ class ProfileController extends Controller
 
         $request->validate([
             'password_lama'         => 'required|string',
-            'password_baru'         => 'required|string|min:6|confirmed',
+            'password_baru'         => ['required', 'string', 'confirmed', new StrongPassword()],
             'password_baru_confirmation' => 'required|string',
         ], [
             'password_baru.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
