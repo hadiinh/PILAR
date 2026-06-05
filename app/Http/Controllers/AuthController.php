@@ -67,6 +67,10 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::clear($key);
             $request->session()->regenerate();
+            
+            // Store session_version untuk pengecekan di CheckAccountActive middleware
+            $request->session()->put('session_version', auth()->user()->session_version);
+            
             return redirect('/beranda')->with('success', 'Anda berhasil masuk.');
         }
 

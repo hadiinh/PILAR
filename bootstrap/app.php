@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
             'check_account_active' => \App\Http\Middleware\CheckAccountActive::class,
+            'force_change_password' => \App\Http\Middleware\ForceChangePassword::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

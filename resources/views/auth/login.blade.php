@@ -44,6 +44,10 @@
             Ingat saya di perangkat ini
         </label>
 
+        <div class="text-right">
+            <a href="{{ route('password.forgot.show') }}" class="text-sm font-semibold text-brand-700 hover:text-brand-800">Lupa Kata Sandi?</a>
+        </div>
+
         <x-button type="submit" variant="primary" size="lg" block>Masuk</x-button>
     </form>
 

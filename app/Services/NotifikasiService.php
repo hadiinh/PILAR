@@ -169,6 +169,67 @@ class NotifikasiService
         $this->fonnte->kirim($pengajuan->no_hp, $pesan, 'pengajuan_disetujui', $user);
     }
 
+    /* ===== Keamanan akun ===== */
+
+    /**
+     * Dikirim setelah Admin/RW menambah warga baru via panel.
+     * Berisi NIK + password default yang harus diganti saat login pertama.
+     */
+    public function notifWargaBaru(User $user, string $passwordPlain): bool
+    {
+        if (!$user->bisaTerimaWa()) return false;
+
+        $tgl = Carbon::now()->translatedFormat('d F Y H:i');
+        $loginUrl = url('/login');
+
+        $pesan = "*[Akun Baru - PILAR RW 016]*\n\n"
+            . "Halo {$user->name},\n\n"
+            . "Akun Sistem RW Anda telah dibuat oleh pengurus pada {$tgl} WIB.\n\n"
+            . "NIK      : {$user->nik}\n"
+            . "Password : {$passwordPlain}\n\n"
+            . "Halaman login:\n{$loginUrl}\n\n"
+            . "Demi keamanan, Anda akan diminta mengubah kata sandi saat login pertama kali.";
+
+        return $this->fonnte->kirim($user->no_hp, $pesan, 'akun_warga_baru', $user);
+    }
+
+    /**
+     * Dikirim setelah Admin/RW melakukan reset kata sandi warga.
+     */
+    public function notifResetPasswordAdmin(User $user, string $passwordPlain): bool
+    {
+        if (!$user->bisaTerimaWa()) return false;
+
+        $tgl = Carbon::now()->translatedFormat('d F Y H:i');
+
+        $pesan = "*[Kata Sandi Direset - PILAR RW 016]*\n\n"
+            . "Halo {$user->name},\n\n"
+            . "Kata sandi akun Anda telah direset oleh pengurus pada {$tgl} WIB.\n\n"
+            . "Kata sandi baru: {$passwordPlain}\n\n"
+            . "Demi keamanan, mohon segera ubah kata sandi setelah berhasil login. "
+            . "Jika ini bukan permintaan Anda, hubungi pengurus RW.";
+
+        return $this->fonnte->kirim($user->no_hp, $pesan, 'reset_password_admin', $user);
+    }
+
+    /**
+     * Konfirmasi sederhana setelah user mengubah/mereset password sendiri.
+     * Tidak berisi password (untuk lupa password, ubah mandiri, login pertama).
+     */
+    public function notifPasswordDiubah(User $user, string $sumber = 'ubah mandiri'): bool
+    {
+        if (!$user->bisaTerimaWa()) return false;
+
+        $tgl = Carbon::now()->translatedFormat('d F Y H:i');
+
+        $pesan = "*[Kata Sandi Diubah - PILAR RW 016]*\n\n"
+            . "Halo {$user->name},\n\n"
+            . "Kata sandi akun Anda berhasil diubah ({$sumber}) pada {$tgl} WIB.\n\n"
+            . "Jika bukan Anda yang melakukan perubahan ini, segera hubungi pengurus RW.";
+
+        return $this->fonnte->kirim($user->no_hp, $pesan, 'password_diubah', $user);
+    }
+
     public function notifPengajuanDitolak(PengajuanAkun $pengajuan, ?User $user = null): void
     {
         $nama = $user?->name ?? 'Warga';

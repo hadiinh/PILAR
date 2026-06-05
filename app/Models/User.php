@@ -50,6 +50,9 @@ class User extends Authenticatable
         'kelurahan_id',
         'kelurahan_nama',
         'notif_wa_aktif',
+        'must_change_password',
+        'password_changed_at',
+        'session_version',
     ];
 
     protected $hidden = [
@@ -66,7 +69,19 @@ class User extends Authenticatable
             'tanggal_lahir'      => 'date',
             'is_kepala_keluarga' => 'boolean',
             'akun_aktif'         => 'boolean',
+            'must_change_password' => 'boolean',
+            'password_changed_at'  => 'datetime',
+            'session_version'      => 'integer',
         ];
+    }
+
+    /**
+     * Naikkan session_version untuk mem-paksa logout semua sesi aktif
+     * milik user ini di request berikutnya (via CheckAccountActive).
+     */
+    public function incrementSessionVersion(): void
+    {
+        $this->increment('session_version');
     }
 
     /* ===== Helpers ===== */

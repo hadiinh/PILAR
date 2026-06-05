@@ -55,22 +55,42 @@ class WargaController extends Controller
     {
         $validated = $this->validateData($request);
 
-        $passwordPlain = $request->filled('password')
-            ? $validated['password']
-            : Str::password(10, true, true, false, false);
+        // Always generate password automatically (ignore any input)
+        $passwordService = app(\App\Services\PasswordPolicyService::class);
+        $passwordPlain = $passwordService->generate();
 
-        User::create(array_merge(
+        $user = User::create(array_merge(
             $validated,
             [
-                'password'        => Hash::make($passwordPlain),
-                'akun_aktif'      => true,
-                'is_kepala_keluarga' => $request->boolean('is_kepala_keluarga'),
-                'notif_wa_aktif'  => true,
+                'password'               => Hash::make($passwordPlain),
+                'akun_aktif'             => true,
+                'is_kepala_keluarga'     => $request->boolean('is_kepala_keluarga'),
+                'notif_wa_aktif'         => true,
+                'must_change_password'   => true,
+                'password_changed_at'    => now(),
             ]
         ));
 
+        // Kirim notifikasi WhatsApp dengan password awal jika ada nomor HP
+        if ($user->bisaTerimaWa()) {
+            $bulan = $this->getBulanIndonesia(now()->month);
+            $tanggal = now()->format('d');
+            $tahun = now()->format('Y');
+            
+            $pesan = "Yth. {$user->name}, akun Anda di Sistem RW telah dibuat oleh Admin/RW pada tanggal {$tanggal} {$bulan} {$tahun}.\n\n"
+                   . "Kata sandi awal: {$passwordPlain}\n\n"
+                   . "Silakan login dan ubah kata sandi Anda segera setelah login. Jangan bagikan kata sandi ini kepada siapa pun.";
+            
+            app(FonnteService::class)->kirim(
+                $user->no_hp,
+                $pesan,
+                'akun_baru_warga',
+                $user
+            );
+        }
+
         return redirect()->route('warga.index')
-            ->with('success', "Warga berhasil ditambahkan. Kata sandi awal: {$passwordPlain}");
+            ->with('success', "Warga berhasil ditambahkan. Notifikasi telah dikirim ke WhatsApp dengan kata sandi awal.");
     }
 
     public function edit(User $warga)
@@ -136,13 +156,59 @@ class WargaController extends Controller
 
     public function resetPassword(User $warga)
     {
-        $passwordBaru = Str::password(10, true, true, false, false);
-        $warga->update(['password' => Hash::make($passwordBaru)]);
+        $passwordBaru = app(\App\Services\PasswordPolicyService::class)->generate();
+        
+        $warga->update([
+            'password'              => Hash::make($passwordBaru),
+            'must_change_password'  => true,
+            'password_changed_at'   => now(),
+        ]);
+        
+        // Force logout semua session lama
+        $warga->incrementSessionVersion();
 
-        return back()->with('success', "Kata sandi {$warga->name} di-reset ke: {$passwordBaru}");
+        // Kirim notifikasi WhatsApp dengan password awal
+        if ($warga->bisaTerimaWa()) {
+            $bulan = $this->getBulanIndonesia(now()->month);
+            $tanggal = now()->format('d');
+            $tahun = now()->format('Y');
+            
+            $pesan = "Yth. {$warga->name}, akun Anda di Sistem RW telah di-reset oleh Admin/RW pada tanggal {$tanggal} {$bulan} {$tahun}.\n\n"
+                   . "Kata sandi awal: {$passwordBaru}\n\n"
+                   . "Silakan login dan ubah kata sandi Anda segera setelah login. Jangan bagikan kata sandi ini kepada siapa pun.";
+            
+            app(FonnteService::class)->kirim(
+                $warga->no_hp,
+                $pesan,
+                'password_reset_admin',
+                $warga
+            );
+        }
+
+        return back()->with('success', "Kata sandi {$warga->name} berhasil di-reset. Notifikasi telah dikirim ke WhatsApp.");
     }
 
     /* ===== Helpers ===== */
+
+    protected function getBulanIndonesia(int $bulan): string
+    {
+        $bulanMap = [
+            1  => 'Januari',
+            2  => 'Februari',
+            3  => 'Maret',
+            4  => 'April',
+            5  => 'Mei',
+            6  => 'Juni',
+            7  => 'Juli',
+            8  => 'Agustus',
+            9  => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
+        ];
+
+        return $bulanMap[$bulan] ?? '';
+    }
 
     protected function validateData(Request $request, ?User $exclude = null): array
     {

@@ -9,6 +9,7 @@ use App\Http\Controllers\KeluargaController;
 use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\NotifikasiLogController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PengajuanAkunController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StatistikWargaController;
@@ -32,6 +33,14 @@ Route::middleware('guest')->group(function () {
     Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
+    // Lupa kata sandi flow
+    Route::get('/password/forgot',  [PasswordResetController::class, 'showForgotForm'])->name('password.forgot.show');
+    Route::post('/password/forgot',  [PasswordResetController::class, 'requestOtp'])->middleware('throttle:5,1')->name('password.forgot.request');
+    Route::get('/password/verify-otp',  [PasswordResetController::class, 'showVerifyForm'])->name('password.verify-otp.show');
+    Route::post('/password/verify-otp',  [PasswordResetController::class, 'verifyOtp'])->middleware('throttle:10,1')->name('password.verify-otp.submit');
+    Route::get('/password/reset',  [PasswordResetController::class, 'showResetForm'])->name('password.reset.show');
+    Route::post('/password/reset',  [PasswordResetController::class, 'resetPassword'])->name('password.reset.submit');
+
     // Pengajuan akun (registrasi dilakukan via pengajuan)
     Route::get('/pengajuan-akun',  [PengajuanAkunController::class, 'create'])->name('pengajuan.create');
     Route::post('/pengajuan-akun', [PengajuanAkunController::class, 'store'])
@@ -40,6 +49,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Force change password route (sebelum check_account_active karena user baru harus ganti password)
+Route::middleware('auth')->group(function () {
+    Route::get('/password/force-change',  [PasswordResetController::class, 'showForceChangeForm'])->name('password.force-change.show');
+    Route::post('/password/force-change', [PasswordResetController::class, 'submitForceChange'])->name('password.force-change.submit');
+});
 
 Route::get('/', fn () => auth()->check() ? redirect('/beranda') : redirect('/login'));
 
@@ -60,7 +75,7 @@ Route::prefix('api/wilayah')->name('wilayah.')->group(function () {
 | Beranda + profile
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'check_account_active'])->group(function () {
+Route::middleware(['auth', 'check_account_active', 'force_change_password'])->group(function () {
 
     Route::get('/beranda', function () {
         $masuk  = (int) Keuangan::where('tipe', 'masuk')->sum('jumlah');

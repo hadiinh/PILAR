@@ -96,8 +96,12 @@
         </div>
 
         @if(!$u)
-            <x-input name="password" type="password" label="Kata Sandi Awal"
-                     hint="Kosongkan untuk dibuatkan otomatis (ditampilkan setelah simpan)." />
+            <div class="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                <p class="text-sm text-blue-900">
+                    <span class="font-semibold">Kata sandi awal akan dibuatkan otomatis</span> dan dikirimkan ke nomor WhatsApp warga. 
+                    Warga wajib mengubah kata sandinya saat login pertama kali.
+                </p>
+            </div>
         @endif
     </div>
 

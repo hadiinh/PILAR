@@ -16,6 +16,7 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
+            'email'          => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'no_hp'          => 'nullable|string|max:20|regex:/^[0-9+\-\s()]+$/',
             'status_warga'   => ['nullable', Rule::in(['tetap', 'kontrak', 'kos', 'lainnya'])],
             'notif_wa_aktif' => 'nullable|boolean',
@@ -34,6 +35,8 @@ class ProfileController extends Controller
             'no_rumah'       => 'nullable|string|max:10',
             'kode_pos'       => 'nullable|string|max:10',
         ], [
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah digunakan oleh user lain.',
             'no_hp.regex' => 'Format nomor HP tidak valid.',
         ]);
 
@@ -66,7 +69,14 @@ class ProfileController extends Controller
             ]);
         }
 
-        $user->update(['password' => Hash::make($request->password_baru)]);
+        $user->update([
+            'password'           => Hash::make($request->password_baru),
+            'must_change_password' => false,
+            'password_changed_at' => now(),
+        ]);
+        
+        // Increment session version untuk force logout session lama
+        $user->incrementSessionVersion();
 
         return back()->with('success', 'Kata sandi berhasil diubah.');
     }

@@ -23,6 +23,13 @@
 
                 <x-input name="name" label="Nama Lengkap" :value="$u->name" required />
 
+                <x-input name="email" 
+                         type="email"
+                         label="Email"
+                         :value="$u->email"
+                         placeholder="nama@email.com"
+                         hint="Email dapat digunakan untuk reset kata sandi." />
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <x-input name="no_hp"
                              type="tel"
