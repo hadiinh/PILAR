@@ -16,10 +16,11 @@
 
         <div class="grid sm:grid-cols-2 gap-4">
             <x-input name="tanggal" type="date" label="Tanggal" :value="$kegiatan->tanggal" required />
-            <x-select name="status" label="Status" required>
-                <option value="baru"     @selected($kegiatan->status === 'baru')>Baru</option>
-                <option value="diproses" @selected($kegiatan->status === 'diproses')>Sedang Berjalan</option>
-                <option value="selesai"  @selected($kegiatan->status === 'selesai')>Selesai</option>
+            <x-select name="kategori" label="Kategori">
+                <option value="">— Pilih kategori —</option>
+                @foreach(['Sosial', 'Kebersihan', 'Rapat', 'Olahraga', 'Lainnya'] as $kat)
+                    <option value="{{ $kat }}" @selected($kegiatan->kategori === $kat)>{{ $kat }}</option>
+                @endforeach
             </x-select>
         </div>
 

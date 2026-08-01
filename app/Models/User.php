@@ -36,6 +36,7 @@ class User extends Authenticatable
         'pekerjaan',
         'akun_aktif',
         'status_warga',
+        'status_rumah',
         'rt',
         'rw',
         'no_rumah',

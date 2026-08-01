@@ -98,17 +98,17 @@
                             {{ ['baru' => 'bg-amber-100 text-amber-700', 'diproses' => 'bg-sky-100 text-sky-700', 'selesai' => 'bg-emerald-100 text-emerald-700'][$l->status] ?? 'bg-zinc-100 text-zinc-700' }}">
                     <x-icon name="flag" class="w-4 h-4" />
                 </span>
-                <div class="min-w-0 flex-1">
+                <div class="min-w-0 flex-1 overflow-hidden">
                     <div class="flex flex-wrap items-center gap-2">
                         <p class="font-semibold text-zinc-900 truncate">{{ $l->judul }}</p>
                         <x-badge :variant="$tone">{{ ucfirst($l->status) }}</x-badge>
                     </div>
-                    <p class="text-xs text-zinc-500 mt-0.5">
+                    <p class="text-xs text-zinc-500 mt-0.5 break-words line-clamp-2">
                         {{ \Carbon\Carbon::parse($l->tanggal)->translatedFormat('d M Y') }}
                         @if($isManager && $l->user)
                             · oleh {{ $l->user->name }}
                         @endif
-                        @if($l->deskripsi) · {{ Str::limit($l->deskripsi, 80) }} @endif
+                        @if($l->deskripsi) · {{ $l->deskripsi }} @endif
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-1.5">

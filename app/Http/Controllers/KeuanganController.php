@@ -10,15 +10,17 @@ use Illuminate\Http\Request;
 
 class KeuanganController extends Controller
 {
+    private const MIN_TAHUN = 2026;
+
     public function index()
     {
         $data = Keuangan::orderBy('tanggal', 'desc')->orderBy('id', 'desc')->get();
 
-        $totalMasuk  = (int) Keuangan::where('tipe', 'masuk')->sum('jumlah');
-        $totalKeluar = (int) Keuangan::where('tipe', 'keluar')->sum('jumlah');
-        $saldo       = $totalMasuk - $totalKeluar;
+        // Saldo keseluruhan: semua pemasukan dikurangi semua pengeluaran (tanpa batas waktu)
+        $saldo = (int) Keuangan::where('tipe', 'masuk')->sum('jumlah')
+            - (int) Keuangan::where('tipe', 'keluar')->sum('jumlah');
 
-        // Statistik bulan ini
+        // Statistik bulan berjalan (bulan & tahun nyata saat ini)
         $awalBulan = Carbon::now()->startOfMonth();
         $masukBulanIni = (int) Keuangan::where('tipe', 'masuk')
             ->where('tanggal', '>=', $awalBulan)
@@ -27,13 +29,37 @@ class KeuanganController extends Controller
             ->where('tanggal', '>=', $awalBulan)
             ->sum('jumlah');
 
-        // Data chart 12 bulan
-        $chart = $this->buildChart(12);
+        // Data chart default: Januari–Desember tahun berjalan
+        $tahunList = range(self::MIN_TAHUN, now()->year + 5);
+        $tahunAktif = now()->year;
+        $chart = $this->buildChartForYear($tahunAktif);
+        $statsTahun = [
+            'masuk'  => (int) Keuangan::where('tipe', 'masuk')->whereYear('tanggal', $tahunAktif)->sum('jumlah'),
+            'keluar' => (int) Keuangan::where('tipe', 'keluar')->whereYear('tanggal', $tahunAktif)->sum('jumlah'),
+        ];
 
         return view('keuangan.index', compact(
-            'data', 'saldo', 'totalMasuk', 'totalKeluar',
-            'masukBulanIni', 'keluarBulanIni', 'chart'
+            'data', 'saldo', 'masukBulanIni', 'keluarBulanIni',
+            'chart', 'tahunList', 'tahunAktif', 'statsTahun'
         ));
+    }
+
+    public function chartData(Request $request)
+    {
+        $mode  = $request->string('mode', 'bulanan')->toString();
+        $tahun = $request->integer('tahun', now()->year);
+        $tahun = max(self::MIN_TAHUN, min($tahun, now()->year + 5));
+
+        $chart = ($mode === 'tahunan')
+            ? $this->buildChartTahunan()
+            : $this->buildChartForYear($tahun);
+
+        $stats = [
+            'masuk'  => (int) Keuangan::where('tipe', 'masuk')->whereYear('tanggal', $tahun)->sum('jumlah'),
+            'keluar' => (int) Keuangan::where('tipe', 'keluar')->whereYear('tanggal', $tahun)->sum('jumlah'),
+        ];
+
+        return response()->json(array_merge($chart, ['stats' => $stats]));
     }
 
     public function create()
@@ -43,6 +69,10 @@ class KeuanganController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->has('jumlah')) {
+            $request->merge(['jumlah' => preg_replace('/\D/', '', (string) $request->input('jumlah'))]);
+        }
+
         $validated = $request->validate([
             'judul'     => 'required|string|max:255',
             'tipe'      => 'required|in:masuk,keluar',
@@ -82,6 +112,10 @@ class KeuanganController extends Controller
 
     public function update(Request $request, Keuangan $keuangan)
     {
+        if ($request->has('jumlah')) {
+            $request->merge(['jumlah' => preg_replace('/\D/', '', (string) $request->input('jumlah'))]);
+        }
+
         $validated = $request->validate([
             'judul'     => 'required|string|max:255',
             'tipe'      => 'required|in:masuk,keluar',
@@ -102,16 +136,17 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Bangun chart 12 bulan: pemasukan, pengeluaran, saldo running.
+     * Bangun chart 12 bulan (Januari–Desember) untuk tahun tertentu:
+     * pemasukan, pengeluaran, saldo running.
      */
-    protected function buildChart(int $bulan = 12): array
+    protected function buildChartForYear(int $tahun): array
     {
         $labels = [];
         $pemasukan = [];
         $pengeluaran = [];
         $saldoRunning = [];
 
-        $start = Carbon::now()->startOfMonth()->subMonths($bulan - 1);
+        $start = Carbon::create($tahun, 1, 1);
 
         $saldoSebelum = (int) Keuangan::where('tipe', 'masuk')
                 ->where('tanggal', '<', $start->toDateString())->sum('jumlah')
@@ -120,7 +155,7 @@ class KeuanganController extends Controller
 
         $saldo = $saldoSebelum;
 
-        for ($i = 0; $i < $bulan; $i++) {
+        for ($i = 0; $i < 12; $i++) {
             $cursor = (clone $start)->addMonths($i);
             $awal   = $cursor->copy()->startOfMonth()->toDateString();
             $akhir  = $cursor->copy()->endOfMonth()->toDateString();
@@ -131,6 +166,44 @@ class KeuanganController extends Controller
             $saldo += ($m - $k);
 
             $labels[] = $cursor->translatedFormat('M Y');
+            $pemasukan[] = $m;
+            $pengeluaran[] = $k;
+            $saldoRunning[] = $saldo;
+        }
+
+        return compact('labels', 'pemasukan', 'pengeluaran', 'saldoRunning');
+    }
+
+    /**
+     * Bangun chart agregat: 1 batang per tahun sesuai rentang dropdown
+     * (MIN_TAHUN hingga tahun berjalan + 5).
+     */
+    protected function buildChartTahunan(): array
+    {
+        $labels = [];
+        $pemasukan = [];
+        $pengeluaran = [];
+        $saldoRunning = [];
+
+        $awal  = self::MIN_TAHUN;
+        $akhir = now()->year + 5;
+
+        $start = Carbon::create($awal, 1, 1);
+
+        $saldoSebelum = (int) Keuangan::where('tipe', 'masuk')
+                ->where('tanggal', '<', $start->toDateString())->sum('jumlah')
+            - (int) Keuangan::where('tipe', 'keluar')
+                ->where('tanggal', '<', $start->toDateString())->sum('jumlah');
+
+        $saldo = $saldoSebelum;
+
+        for ($t = $awal; $t <= $akhir; $t++) {
+            $m = (int) Keuangan::where('tipe', 'masuk')->whereYear('tanggal', $t)->sum('jumlah');
+            $k = (int) Keuangan::where('tipe', 'keluar')->whereYear('tanggal', $t)->sum('jumlah');
+
+            $saldo += ($m - $k);
+
+            $labels[] = (string) $t;
             $pemasukan[] = $m;
             $pengeluaran[] = $k;
             $saldoRunning[] = $saldo;

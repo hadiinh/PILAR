@@ -16,8 +16,8 @@
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
     <x-stat label="Saldo Kas" value="Rp {{ number_format($saldo) }}" icon="wallet" tone="brand" />
-    <x-stat label="Total Pemasukan" value="Rp {{ number_format($totalMasuk) }}" icon="arrow-up" tone="success" />
-    <x-stat label="Total Pengeluaran" value="Rp {{ number_format($totalKeluar) }}" icon="arrow-down" tone="danger" />
+    <x-stat label="Total Pemasukan" value="Rp {{ number_format($statsTahun['masuk']) }}" icon="arrow-up" tone="success" value-id="statTotalMasuk" />
+    <x-stat label="Total Pengeluaran" value="Rp {{ number_format($statsTahun['keluar']) }}" icon="arrow-down" tone="danger" value-id="statTotalKeluar" />
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
@@ -30,13 +30,23 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
             <h2 class="font-semibold text-zinc-900">Grafik Kas RW</h2>
-            <p class="text-xs text-zinc-500">Perkembangan kas 12 bulan terakhir.</p>
+            <p class="text-xs text-zinc-500">Perkembangan kas per bulan dan per tahun.</p>
         </div>
-        <div class="hidden sm:flex gap-1 rounded-lg bg-zinc-100 p-1 text-xs font-semibold">
-            <button type="button" data-chart-view="bar"
-                    class="chart-toggle px-3 h-8 rounded-md bg-white shadow-sm text-zinc-900">Bulanan</button>
-            <button type="button" data-chart-view="line"
-                    class="chart-toggle px-3 h-8 rounded-md text-zinc-600">Saldo Berjalan</button>
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="hidden sm:flex gap-1 rounded-lg bg-zinc-100 p-1 text-xs font-semibold">
+                <button type="button" data-chart-view="bulanan"
+                        class="chart-toggle px-3 h-8 rounded-md bg-white shadow-sm text-zinc-900">Bulanan</button>
+                <button type="button" data-chart-view="tahunan"
+                        class="chart-toggle px-3 h-8 rounded-md text-zinc-600">Tahunan</button>
+                <button type="button" data-chart-view="saldo"
+                        class="chart-toggle px-3 h-8 rounded-md text-zinc-600">Saldo Berjalan</button>
+            </div>
+            <select id="chartTahun" aria-label="Pilih tahun"
+                    class="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-sm font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                @foreach($tahunList as $t)
+                    <option value="{{ $t }}" @selected($t === $tahunAktif)>{{ $t }}</option>
+                @endforeach
+            </select>
         </div>
     </div>
 
@@ -100,26 +110,34 @@
     </ul>
 
     {{-- Desktop: table --}}
-    <div class="hidden md:block overflow-x-auto -mx-2">
+    <div class="hidden md:block -mx-2">
         <table class="w-full text-sm">
             <thead class="text-left text-zinc-500">
                 <tr class="border-b border-zinc-200">
-                    <th class="py-2 px-2 font-semibold">Tanggal</th>
+                    <th class="py-2 px-2 font-semibold whitespace-nowrap">Tanggal</th>
                     <th class="py-2 px-2 font-semibold">Keterangan</th>
-                    <th class="py-2 px-2 font-semibold">Tipe</th>
-                    <th class="py-2 px-2 font-semibold text-right">Jumlah</th>
-                    @if($isManager)<th class="py-2 px-2"></th>@endif
+                    <th class="py-2 px-2 font-semibold whitespace-nowrap">Tipe</th>
+                    <th class="py-2 px-2 font-semibold text-right whitespace-nowrap">Jumlah</th>
+                    @if($isManager)<th class="py-2 px-2 whitespace-nowrap"></th>@endif
                 </tr>
             </thead>
             <tbody id="trxList">
                 @foreach($data as $t)
-                    <tr class="trx-row border-b border-zinc-100" data-tipe="{{ $t->tipe }}">
+                    <tr class="trx-row border-b border-zinc-100 align-top" data-tipe="{{ $t->tipe }}">
                         <td class="py-3 px-2 text-zinc-700 whitespace-nowrap">{{ \Carbon\Carbon::parse($t->tanggal)->translatedFormat('d M Y') }}</td>
-                        <td class="py-3 px-2">
-                            <p class="font-semibold text-zinc-900">{{ $t->judul }}</p>
-                            @if($t->deskripsi)<p class="text-xs text-zinc-500">{{ $t->deskripsi }}</p>@endif
+                        <td class="py-3 px-2 min-w-0">
+                            <p class="font-semibold text-zinc-900 break-words">{{ $t->judul }}</p>
+                            @if($t->deskripsi)
+                            <div class="mt-0.5" data-desc>
+                                <p class="text-xs text-zinc-500 whitespace-pre-line wrap-anywhere line-clamp-2" data-desc-text>{{ $t->deskripsi }}</p>
+                                <button type="button" data-desc-toggle aria-expanded="false"
+                                        class="mt-0.5 inline-flex items-center text-brand-700 hover:text-brand-800">
+                                    <x-icon name="chevron-down" data-desc-arrow class="w-4 h-4 transition-transform" />
+                                </button>
+                            </div>
+                            @endif
                         </td>
-                        <td class="py-3 px-2">
+                        <td class="py-3 px-2 whitespace-nowrap">
                             <x-badge :variant="$t->tipe === 'masuk' ? 'success' : 'danger'">{{ ucfirst($t->tipe) }}</x-badge>
                         </td>
                         <td class="py-3 px-2 text-right font-bold {{ $t->tipe === 'masuk' ? 'text-emerald-700' : 'text-red-700' }} whitespace-nowrap">
@@ -176,10 +194,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const startChart = () => {
         if (typeof Chart === 'undefined') return setTimeout(startChart, 50);
 
-        const chartData = @json($chart);
-        const ctx = document.getElementById('chartKeuanganWarga');
-        if (!ctx) return;
-
         const colors = {
             masuk: '#3a8567', keluar: '#dc2626', saldo: '#1f5fa6',
             grid: '#e4e4e7', text: '#52525b',
@@ -202,17 +216,26 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         };
 
+        const fmtRp = (v) => 'Rp ' + Number(v || 0).toLocaleString('id-ID');
+
+        const ctx = document.getElementById('chartKeuanganWarga');
+        if (!ctx) return;
+
         let chart;
-        function render(view) {
+        let currentView = 'bulanan';
+        let currentYear = {{ $tahunAktif }};
+
+        function render(view, data) {
             if (chart) chart.destroy();
-            if (view === 'line') {
+            const labels = data.labels;
+            if (view === 'saldo') {
                 chart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: chartData.labels,
+                        labels,
                         datasets: [{
                             label: 'Saldo Berjalan',
-                            data: chartData.saldoRunning,
+                            data: data.saldoRunning,
                             borderColor: colors.saldo,
                             backgroundColor: 'rgba(31,95,166,0.10)',
                             borderWidth: 2.5,
@@ -231,10 +254,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 chart = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: chartData.labels,
+                        labels,
                         datasets: [
-                            { label: 'Pemasukan', data: chartData.pemasukan, backgroundColor: colors.masuk, borderRadius: 6, maxBarThickness: 24 },
-                            { label: 'Pengeluaran', data: chartData.pengeluaran, backgroundColor: colors.keluar, borderRadius: 6, maxBarThickness: 24 },
+                            { label: 'Pemasukan', data: data.pemasukan, backgroundColor: colors.masuk, borderRadius: 6, maxBarThickness: 24 },
+                            { label: 'Pengeluaran', data: data.pengeluaran, backgroundColor: colors.keluar, borderRadius: 6, maxBarThickness: 24 },
                         ],
                     },
                     options: {
@@ -250,7 +273,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
         }
-        render('bar');
+
+        async function refresh(view, year) {
+            try {
+                const res = await fetch('/keuangan/chart-data?mode=' + encodeURIComponent(view) + '&tahun=' + year, {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                render(view, data);
+                document.getElementById('statTotalMasuk').textContent = fmtRp(data.stats.masuk);
+                document.getElementById('statTotalKeluar').textContent = fmtRp(data.stats.keluar);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        render('bulanan', @json($chart));
+
+        const yearSelect = document.getElementById('chartTahun');
 
         document.querySelectorAll('.chart-toggle').forEach((btn) => {
             btn.addEventListener('click', function () {
@@ -260,8 +303,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 this.classList.add('bg-white', 'shadow-sm', 'text-zinc-900');
                 this.classList.remove('text-zinc-600');
-                render(this.dataset.chartView);
+
+                currentView = this.dataset.chartView;
+                const isTahunan = currentView === 'tahunan';
+                yearSelect.classList.toggle('hidden', isTahunan);
+                yearSelect.disabled = isTahunan;
+                refresh(currentView, currentYear);
             });
+        });
+
+        yearSelect.addEventListener('change', () => {
+            currentYear = parseInt(yearSelect.value, 10);
+            refresh(currentView, currentYear);
         });
     };
     startChart();

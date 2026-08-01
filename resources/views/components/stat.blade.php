@@ -4,6 +4,7 @@
     'icon' => null,
     'tone' => 'brand',
     'help' => null,
+    'valueId' => null,
 ])
 
 @php
@@ -22,7 +23,7 @@
     <div class="flex items-start justify-between gap-2 sm:gap-3">
         <div class="min-w-0">
             <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-zinc-500 truncate">{{ $label }}</p>
-            <p class="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-zinc-900 truncate">{{ $value }}</p>
+            <p class="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-zinc-900 truncate" @if($valueId) id="{{ $valueId }}" @endif>{{ $value }}</p>
             @if($help)
                 <p class="mt-1 text-xs text-zinc-500 line-clamp-2">{{ $help }}</p>
             @endif

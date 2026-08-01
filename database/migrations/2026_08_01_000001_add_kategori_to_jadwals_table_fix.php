@@ -7,7 +7,9 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Kolom `kategori` di tabel `jadwals` tidak pernah dibuat karena migrasi
+     * 2026_05_23_add_kategori_to_jadwals_table salah menargetkan tabel `laporans`.
+     * Migrasi ini memperbaiki database yang sudah pernah menjalankan migrasi tersebut.
      */
     public function up(): void
     {
@@ -18,9 +20,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('jadwals', function (Blueprint $table) {

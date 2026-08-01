@@ -129,7 +129,14 @@ class WargaController extends Controller
     public function activate(User $warga)
     {
         $warga->update(['akun_aktif' => true]);
-        return back()->with('success', 'Akun warga diaktifkan.');
+
+        // Kirim notifikasi WhatsApp jika user punya nomor HP dan notif aktif
+        if ($warga->bisaTerimaWa()) {
+            $pesan = "Yth. {$warga->name}, akun Sistem RW Anda telah diaktifkan kembali oleh Admin/RW. Saatnya kembali menggunakan akun Anda. Jika ada kendala, silakan hubungi pengurus RW.";
+            app(FonnteService::class)->kirim($warga->no_hp, $pesan, 'akun_diaktifkan', $warga);
+        }
+
+        return back()->with('success', 'Akun warga diaktifkan. Notifikasi telah dikirim ke WhatsApp.');
     }
 
     public function destroy(User $warga)

@@ -19,7 +19,7 @@
                 <option value="masuk" {{ old('tipe') === 'masuk' ? 'selected' : '' }}>Pemasukan</option>
                 <option value="keluar" {{ old('tipe') === 'keluar' ? 'selected' : '' }}>Pengeluaran</option>
             </x-select>
-            <x-input name="jumlah" type="number" min="0" step="1" label="Jumlah (Rp)" placeholder="50000" required />
+            <x-input name="jumlah" rupiah label="Jumlah (Rp)" placeholder="50000" required />
         </div>
 
         <x-input name="tanggal" type="date" label="Tanggal Transaksi" :value="now()->toDateString()" required />

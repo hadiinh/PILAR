@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DataWargaController;
 use App\Http\Controllers\FotoController;
 use App\Http\Controllers\JadwalController;
 use App\Http\Controllers\KegiatanController;
@@ -123,7 +124,15 @@ Route::middleware(['auth', 'role:ketua_rw,admin'])->group(function () {
     Route::get('/laporan/{laporan}/edit', [LaporanController::class, 'edit'])->name('laporan.edit');
     Route::put('/laporan/{laporan}',      [LaporanController::class, 'update'])->name('laporan.update');
 
-    // Manajemen warga
+    // Manajemen data warga
+    Route::get('/data-warga',                  [DataWargaController::class, 'index'])->name('data-warga.index');
+    Route::get('/data-warga/create',           [DataWargaController::class, 'create'])->name('data-warga.create');
+    Route::post('/data-warga',                 [DataWargaController::class, 'store'])->name('data-warga.store');
+    Route::get('/data-warga/{data_warga}/edit',[DataWargaController::class, 'edit'])->name('data-warga.edit');
+    Route::put('/data-warga/{data_warga}',    [DataWargaController::class, 'update'])->name('data-warga.update');
+    Route::delete('/data-warga/{data_warga}', [DataWargaController::class, 'destroy'])->name('data-warga.destroy');
+
+    // Manajemen warga (akun)
     Route::get('/warga',                       [WargaController::class, 'index'])->name('warga.index');
     Route::get('/warga/create',                [WargaController::class, 'create'])->name('warga.create');
     Route::post('/warga',                      [WargaController::class, 'store'])->name('warga.store');
@@ -173,6 +182,7 @@ Route::middleware(['auth', 'check_account_active'])->group(function () {
     Route::get('/foto/{foto}',   [FotoController::class, 'show'])->name('foto.show')->whereNumber('foto');
 
     Route::get('/keuangan',      [KeuanganController::class, 'index'])->name('keuangan.index');
+    Route::get('/keuangan/chart-data', [KeuanganController::class, 'chartData'])->name('keuangan.chart-data');
 
     Route::get('/laporan',                  [LaporanController::class, 'index'])->name('laporan.index');
     Route::get('/laporan/create',           [LaporanController::class, 'create'])->name('laporan.create');

@@ -19,10 +19,11 @@
 
         <div class="grid sm:grid-cols-2 gap-4">
             <x-input name="tanggal" type="date" label="Tanggal Kegiatan" required />
-            <x-select name="status" label="Status">
-                <option value="baru" {{ old('status') === 'baru' ? 'selected' : '' }}>Baru</option>
-                <option value="diproses" {{ old('status') === 'diproses' ? 'selected' : '' }}>Sedang Berjalan</option>
-                <option value="selesai" {{ old('status') === 'selesai' ? 'selected' : '' }}>Selesai</option>
+            <x-select name="kategori" label="Kategori">
+                <option value="">— Pilih kategori —</option>
+                @foreach(['Sosial', 'Kebersihan', 'Rapat', 'Olahraga', 'Lainnya'] as $kat)
+                    <option value="{{ $kat }}" {{ old('kategori') === $kat ? 'selected' : '' }}>{{ $kat }}</option>
+                @endforeach
             </x-select>
         </div>
 

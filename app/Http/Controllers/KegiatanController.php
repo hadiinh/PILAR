@@ -29,7 +29,7 @@ class KegiatanController extends Controller
             'judul'     => 'required|string|max:255',
             'deskripsi' => 'required|string|max:2000',
             'tanggal'   => 'required|date',
-            'status'    => 'nullable|in:baru,diproses,selesai',
+            'kategori'  => 'nullable|string|max:50',
             'gambar'    => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
@@ -41,9 +41,9 @@ class KegiatanController extends Controller
         $kegiatan = Kegiatan::create([
             'judul'     => $validated['judul'],
             'slug'      => Str::slug($validated['judul']).'-'.Str::lower(Str::random(5)),
+            'kategori'  => $validated['kategori'] ?? null,
             'deskripsi' => $validated['deskripsi'],
             'tanggal'   => $validated['tanggal'],
-            'status'    => $validated['status'] ?? 'baru',
             'gambar'    => $gambar,
         ]);
 
@@ -72,7 +72,7 @@ class KegiatanController extends Controller
             'judul'     => 'required|string|max:255',
             'deskripsi' => 'required|string|max:2000',
             'tanggal'   => 'required|date',
-            'status'    => 'required|in:baru,diproses,selesai',
+            'kategori'  => 'nullable|string|max:50',
             'gambar'    => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 

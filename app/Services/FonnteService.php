@@ -93,15 +93,37 @@ class FonnteService
 
     /**
      * Kirim ke banyak user. Hanya user notif_wa_aktif=true & punya no_hp.
+     * Gunakan queue untuk menghindari rate limit jika banyak user.
      */
-    public function kirimKeUsers(iterable $users, string $pesan, string $jenis = 'manual'): int
+    public function kirimKeUsers(iterable $users, string $pesan, string $jenis = 'manual', bool $useQueue = false): int
     {
+        $targetUsers = collect($users)
+            ->filter(fn ($u) => $u instanceof User && $u->bisaTerimaWa())
+            ->values();
+
+        if ($targetUsers->isEmpty()) {
+            return 0;
+        }
+
+        // Jika menggunakan queue, dispatch job per user dengan delay batching
+        if ($useQueue && app()->bound('queue')) {
+            $targetUsers->each(function (User $user, int $index) use ($pesan, $jenis) {
+                dispatch(
+                    new \App\Jobs\KirimWaJob($user->no_hp, $pesan, $jenis, $user)
+                )->delay(now()->addSeconds($index * 2)); // Delay 2 detik antar pesan
+            });
+            return $targetUsers->count();
+        }
+
+        // Eksekusi langsung (mode sync)
         $sukses = 0;
-        foreach ($users as $u) {
-            if (!$u instanceof User) continue;
-            if (!$u->bisaTerimaWa()) continue;
+        foreach ($targetUsers as $u) {
             if ($this->kirim($u->no_hp, $pesan, $jenis, $u)) {
                 $sukses++;
+            }
+            // Delay kecil antar pesan untuk menghindari rate limit
+            if ($sukses > 0 && $sukses % 10 === 0) {
+                usleep(500000); // 0.5 detik setiap 10 pesan
             }
         }
         return $sukses;

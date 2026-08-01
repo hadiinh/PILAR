@@ -21,7 +21,7 @@
 
     @if($foto->deskripsi)
         <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-500 mt-5 mb-2">Deskripsi</h4>
-        <p class="text-zinc-700 whitespace-pre-line">{{ $foto->deskripsi }}</p>
+        <p class="text-zinc-700 whitespace-pre-line break-words">{{ $foto->deskripsi }}</p>
     @endif
 
     <p class="text-xs text-zinc-500 mt-4">Diunggah {{ $foto->created_at->translatedFormat('d M Y H:i') }}</p>

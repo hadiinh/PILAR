@@ -5,8 +5,9 @@
 @section('content')
 @php $u = auth()->user(); @endphp
 
-<x-page-header title="Halo, {{ explode(' ', $u->name)[0] }}"
-               subtitle="Ringkasan aktivitas RW 016 untuk Anda.">
+<x-page-header
+    title="Halo, {{ $u->name }}"
+    subtitle="Ringkasan aktivitas RW 016 untuk Anda.">
     @if($isManager)
         <x-button href="{{ url('/jadwal/create') }}" variant="primary" icon="plus">Tambah Jadwal</x-button>
         <x-button href="{{ url('/keuangan/create') }}" variant="secondary" icon="plus">Catat Kas</x-button>

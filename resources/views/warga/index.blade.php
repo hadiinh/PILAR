@@ -3,8 +3,8 @@
 @section('title', 'Manajemen Warga')
 
 @section('content')
-<x-page-header title="Manajemen Warga"
-               subtitle="Kelola data kependudukan RW 016.">
+<x-page-header title="Manajemen Akun Warga"
+               subtitle="Kelola data akun kependudukan RW 016.">
     <x-button href="{{ route('warga.create') }}" variant="primary" icon="plus">Tambah Warga</x-button>
 </x-page-header>
 

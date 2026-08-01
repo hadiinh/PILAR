@@ -18,7 +18,7 @@
                 <option value="masuk" @selected($keuangan->tipe === 'masuk')>Pemasukan</option>
                 <option value="keluar" @selected($keuangan->tipe === 'keluar')>Pengeluaran</option>
             </x-select>
-            <x-input name="jumlah" type="number" min="0" step="1" label="Jumlah (Rp)" :value="$keuangan->jumlah" required />
+            <x-input name="jumlah" rupiah label="Jumlah (Rp)" :value="$keuangan->jumlah" required />
         </div>
 
         <x-input name="tanggal" type="date" label="Tanggal Transaksi" :value="$keuangan->tanggal" required />

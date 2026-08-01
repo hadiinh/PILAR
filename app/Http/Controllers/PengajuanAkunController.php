@@ -33,16 +33,6 @@ class PengajuanAkunController extends Controller
 
     public function store(Request $request)
     {
-        // Verifikasi reCAPTCHA terlebih dahulu
-        $recaptchaResponse = $request->string('g-recaptcha-response')->toString();
-        if (!$this->recaptcha->verify($recaptchaResponse, $request->ip())) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'g-recaptcha-response' => 'Verifikasi reCAPTCHA gagal. Silakan coba lagi.',
-                ]);
-        }
-
         // Rate limit per IP supaya tidak diabuse
         $key = 'pengajuan:' . $request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
@@ -58,13 +48,11 @@ class PengajuanAkunController extends Controller
             'no_hp'                 => 'required|string|max:20|regex:/^[0-9+\-\s()]+$/',
             'password'              => ['required', 'string', 'confirmed', new StrongPassword()],
             'password_confirmation' => 'required|string',
-            'g-recaptcha-response'  => 'required|string',
         ], [
             'nik.required'  => 'NIK wajib diisi.',
             'nik.digits'    => 'NIK harus terdiri dari 16 angka.',
             'no_hp.regex'   => 'Format nomor HP tidak valid.',
             'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
-            'g-recaptcha-response.required' => 'Silakan verifikasi reCAPTCHA terlebih dahulu.',
         ]);
 
         // 1. NIK harus terdaftar sebagai warga

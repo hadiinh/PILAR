@@ -40,7 +40,7 @@
 
     @if($laporan->deskripsi)
         <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">Deskripsi</h4>
-        <p class="text-zinc-700 whitespace-pre-line mb-4">{{ $laporan->deskripsi }}</p>
+        <p class="text-zinc-700 whitespace-pre-line wrap-anywhere max-w-full mb-4">{{ $laporan->deskripsi }}</p>
     @endif
 
     @if($laporan->foto)

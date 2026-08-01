@@ -33,21 +33,10 @@ class AuthController extends Controller
         $validated = $request->validate([
             'nik'      => 'required|string|digits:16',
             'password' => 'required|string',
-            'g-recaptcha-response' => 'required|string',
         ], [
             'nik.required' => 'NIK wajib diisi.',
             'nik.digits'   => 'NIK harus terdiri dari 16 angka.',
-            'g-recaptcha-response.required' => 'Silakan verifikasi reCAPTCHA terlebih dahulu.',
         ]);
-
-        // Verifikasi reCAPTCHA
-        if (!$this->recaptcha->verify($validated['g-recaptcha-response'], $request->ip())) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'g-recaptcha-response' => 'Verifikasi reCAPTCHA gagal. Silakan coba lagi.',
-                ]);
-        }
 
         $key = 'login:' . $validated['nik'] . '|' . $request->ip();
 

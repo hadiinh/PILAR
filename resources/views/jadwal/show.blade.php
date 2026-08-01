@@ -43,6 +43,6 @@
     </div>
 
     <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">Deskripsi</h4>
-    <p class="text-zinc-700 leading-relaxed whitespace-pre-line">{{ $jadwal->deskripsi ?: '—' }}</p>
+    <p class="text-zinc-700 leading-relaxed whitespace-pre-line break-words">{{ $jadwal->deskripsi ?: '—' }}</p>
 </x-card>
 @endsection

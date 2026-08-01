@@ -73,7 +73,7 @@
 
             <div class="hidden border-t border-zinc-200 bg-zinc-50/40 px-5 py-4">
                 <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-1">Deskripsi</h4>
-                <p class="text-sm text-zinc-700 whitespace-pre-line">{{ $j->deskripsi }}</p>
+                <p class="text-sm text-zinc-700 whitespace-pre-line break-words">{{ $j->deskripsi }}</p>
 
                 @if($isManager)
                 <div class="flex gap-2 mt-4">
