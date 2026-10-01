@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Services\FonnteService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class WargaController extends Controller
 {
+    public function __construct(protected NotifikasiService $notifikasi) {}
     public function index(Request $request)
     {
         $q = trim((string) $request->get('q'));
@@ -72,25 +73,11 @@ class WargaController extends Controller
         ));
 
         // Kirim notifikasi WhatsApp dengan password awal jika ada nomor HP
-        if ($user->bisaTerimaWa()) {
-            $bulan = $this->getBulanIndonesia(now()->month);
-            $tanggal = now()->format('d');
-            $tahun = now()->format('Y');
-            
-            $pesan = "Yth. {$user->name}, akun Anda di Sistem RW telah dibuat oleh Admin/RW pada tanggal {$tanggal} {$bulan} {$tahun}.\n\n"
-                   . "Kata sandi awal: {$passwordPlain}\n\n"
-                   . "Silakan login dan ubah kata sandi Anda segera setelah login. Jangan bagikan kata sandi ini kepada siapa pun.";
-            
-            app(FonnteService::class)->kirim(
-                $user->no_hp,
-                $pesan,
-                'akun_baru_warga',
-                $user
-            );
-        }
+        $notif = $this->notifikasi->notifWargaBaru($user, $passwordPlain);
 
         return redirect()->route('warga.index')
-            ->with('success', "Warga berhasil ditambahkan. Notifikasi telah dikirim ke WhatsApp dengan kata sandi awal.");
+            ->with('success', 'Warga berhasil ditambahkan.'
+                . ($notif ? ' Notifikasi telah dikirim ke WhatsApp dengan kata sandi awal.' : ''));
     }
 
     public function edit(User $warga)
@@ -118,10 +105,7 @@ class WargaController extends Controller
         $warga->update(['akun_aktif' => false]);
 
         // Kirim notifikasi WhatsApp jika user punya nomor HP dan notif aktif
-        if ($warga->bisaTerimaWa()) {
-            $pesan = "Yth. {$warga->name}, akun Sistem RW Anda telah dinonaktifkan oleh Admin/RW. Jika merasa ini keliru, silakan hubungi pengurus RW.";
-            app(FonnteService::class)->kirim($warga->no_hp, $pesan, 'akun_dinonaktifkan', $warga);
-        }
+        $this->notifikasi->notifAkunDinonaktifkan($warga);
 
         return back()->with('success', 'Akun warga dinonaktifkan.');
     }
@@ -131,10 +115,7 @@ class WargaController extends Controller
         $warga->update(['akun_aktif' => true]);
 
         // Kirim notifikasi WhatsApp jika user punya nomor HP dan notif aktif
-        if ($warga->bisaTerimaWa()) {
-            $pesan = "Yth. {$warga->name}, akun Sistem RW Anda telah diaktifkan kembali oleh Admin/RW. Saatnya kembali menggunakan akun Anda. Jika ada kendala, silakan hubungi pengurus RW.";
-            app(FonnteService::class)->kirim($warga->no_hp, $pesan, 'akun_diaktifkan', $warga);
-        }
+        $this->notifikasi->notifAkunDiaktifkan($warga);
 
         return back()->with('success', 'Akun warga diaktifkan. Notifikasi telah dikirim ke WhatsApp.');
     }
@@ -146,13 +127,10 @@ class WargaController extends Controller
         }
 
         // Kirim notifikasi WhatsApp sebelum soft delete (agar bisa baca no_hp)
-        if ($warga->bisaTerimaWa()) {
-            $pesan = "Yth. {$warga->name}, akun Sistem RW Anda telah dihapus oleh Admin/RW. Jika merasa ini keliru, silakan hubungi pengurus RW.";
-            try {
-                app(FonnteService::class)->kirim($warga->no_hp, $pesan, 'akun_dihapus', $warga);
-            } catch (\Throwable $e) {
-                report($e);
-            }
+        try {
+            $this->notifikasi->notifAkunDihapus($warga);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         // Soft delete - menjaga data history tetap ada
@@ -175,47 +153,13 @@ class WargaController extends Controller
         $warga->incrementSessionVersion();
 
         // Kirim notifikasi WhatsApp dengan password awal
-        if ($warga->bisaTerimaWa()) {
-            $bulan = $this->getBulanIndonesia(now()->month);
-            $tanggal = now()->format('d');
-            $tahun = now()->format('Y');
-            
-            $pesan = "Yth. {$warga->name}, akun Anda di Sistem RW telah di-reset oleh Admin/RW pada tanggal {$tanggal} {$bulan} {$tahun}.\n\n"
-                   . "Kata sandi awal: {$passwordBaru}\n\n"
-                   . "Silakan login dan ubah kata sandi Anda segera setelah login. Jangan bagikan kata sandi ini kepada siapa pun.";
-            
-            app(FonnteService::class)->kirim(
-                $warga->no_hp,
-                $pesan,
-                'password_reset_admin',
-                $warga
-            );
-        }
+        $notif = $this->notifikasi->notifResetPasswordAdmin($warga, $passwordBaru);
 
-        return back()->with('success', "Kata sandi {$warga->name} berhasil di-reset. Notifikasi telah dikirim ke WhatsApp.");
+        return back()->with('success', "Kata sandi {$warga->name} berhasil di-reset."
+            . ($notif ? ' Notifikasi telah dikirim ke WhatsApp.' : ''));
     }
 
     /* ===== Helpers ===== */
-
-    protected function getBulanIndonesia(int $bulan): string
-    {
-        $bulanMap = [
-            1  => 'Januari',
-            2  => 'Februari',
-            3  => 'Maret',
-            4  => 'April',
-            5  => 'Mei',
-            6  => 'Juni',
-            7  => 'Juli',
-            8  => 'Agustus',
-            9  => 'September',
-            10 => 'Oktober',
-            11 => 'November',
-            12 => 'Desember',
-        ];
-
-        return $bulanMap[$bulan] ?? '';
-    }
 
     protected function validateData(Request $request, ?User $exclude = null): array
     {

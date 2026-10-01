@@ -35,10 +35,17 @@ class KirimWaJob implements ShouldQueue
         $sukses = $fonnte->kirim($this->nomor, $this->pesan, $this->jenis, $this->user);
 
         if (!$sukses) {
-            Log::warning('[KirimWaJob] Gagal mengirim WA', [
+            // THROW wajib: tanpa ini Laravel menganggap job berhasil walau pesan
+            // gagal terkirim, sehingga tries/backoff/failed() tidak pernah jalan.
+            Log::warning('[KirimWaJob] Gagal mengirim WA, job akan di-retry', [
                 'nomor' => $this->nomor,
                 'jenis' => $this->jenis,
+                'attempt' => $this->attempts(),
             ]);
+
+            throw new \RuntimeException(
+                'Gagal mengirim WhatsApp ke ' . $this->nomor . ' (jenis: ' . $this->jenis . ')'
+            );
         }
     }
 

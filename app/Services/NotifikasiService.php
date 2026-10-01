@@ -59,8 +59,10 @@ class NotifikasiService
             . ($jadwal->deskripsi ? "\nKeterangan:\n{$jadwal->deskripsi}\n" : "")
             . "\nMohon dicatat. Terima kasih.";
 
+        // Mode kirim mengikuti config 'fonnte.queue' (default sync) — lihat
+        // FonnteService::kirimKeUsers. Mode queue butuh worker (queue:work).
         $jumlah = $this->fonnte->kirimKeUsers($this->warga(), $pesan, 'jadwal_baru');
-        Log::info('[Notifikasi] Broadcast jadwal baru', ['jadwal_id' => $jadwal->id, 'terkirim' => $jumlah]);
+        Log::info('[Notifikasi] Broadcast jadwal baru', ['jadwal_id' => $jadwal->id, 'target' => $jumlah]);
     }
 
     /* ===== Kegiatan ===== */
@@ -78,7 +80,7 @@ class NotifikasiService
             . "Terima kasih atas perhatiannya.";
 
         $jumlah = $this->fonnte->kirimKeUsers($this->warga(), $pesan, 'kegiatan_baru');
-        Log::info('[Notifikasi] Broadcast kegiatan baru', ['kegiatan_id' => $kegiatan->id, 'terkirim' => $jumlah]);
+        Log::info('[Notifikasi] Broadcast kegiatan baru', ['kegiatan_id' => $kegiatan->id, 'target' => $jumlah]);
     }
 
     /* ===== Laporan ===== */
@@ -103,7 +105,7 @@ class NotifikasiService
         $jumlah = $this->fonnte->kirimKeUsers($this->pengurus(), $pesan, 'laporan_baru');
         Log::info('[Notifikasi] Notif laporan baru ke pengurus', [
             'laporan_id' => $laporan->id,
-            'terkirim'   => $jumlah,
+            'target'     => $jumlah,
         ]);
     }
 
@@ -170,6 +172,46 @@ class NotifikasiService
     }
 
     /* ===== Keamanan akun ===== */
+
+    /**
+     * Dikirim saat Admin/RW menonaktifkan akun warga.
+     */
+    public function notifAkunDinonaktifkan(User $user): bool
+    {
+        if (!$user->bisaTerimaWa()) return false;
+
+        $pesan = "Yth. {$user->name}, akun Sistem RW Anda telah dinonaktifkan oleh Admin/RW. "
+            . "Jika merasa ini keliru, silakan hubungi pengurus RW.";
+
+        return $this->fonnte->kirim($user->no_hp, $pesan, 'akun_dinonaktifkan', $user);
+    }
+
+    /**
+     * Dikirim saat Admin/RW mengaktifkan kembali akun warga.
+     */
+    public function notifAkunDiaktifkan(User $user): bool
+    {
+        if (!$user->bisaTerimaWa()) return false;
+
+        $pesan = "Yth. {$user->name}, akun Sistem RW Anda telah diaktifkan kembali oleh Admin/RW. "
+            . "Saatnya kembali menggunakan akun Anda. Jika ada kendala, silakan hubungi pengurus RW.";
+
+        return $this->fonnte->kirim($user->no_hp, $pesan, 'akun_diaktifkan', $user);
+    }
+
+    /**
+     * Dikirim saat Admin/RW menghapus akun warga.
+     * HARUS dipanggil SEBELUM soft delete agar no_hp masih terbaca.
+     */
+    public function notifAkunDihapus(User $user): bool
+    {
+        if (!$user->bisaTerimaWa()) return false;
+
+        $pesan = "Yth. {$user->name}, akun Sistem RW Anda telah dihapus oleh Admin/RW. "
+            . "Jika merasa ini keliru, silakan hubungi pengurus RW.";
+
+        return $this->fonnte->kirim($user->no_hp, $pesan, 'akun_dihapus', $user);
+    }
 
     /**
      * Dikirim setelah Admin/RW menambah warga baru via panel.

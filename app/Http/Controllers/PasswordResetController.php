@@ -6,7 +6,7 @@ use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\SetNewPasswordRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Models\User;
-use App\Services\FonnteService;
+use App\Services\NotifikasiService;
 use App\Services\OtpService;
 use App\Services\PasswordPolicyService;
 use Illuminate\Http\Request;
@@ -28,7 +28,7 @@ class PasswordResetController extends Controller
     public function __construct(
         protected OtpService $otpService,
         protected PasswordPolicyService $policyService,
-        protected FonnteService $fonnteService,
+        protected NotifikasiService $notifikasi,
     ) {}
 
     /**
@@ -185,19 +185,7 @@ class PasswordResetController extends Controller
         $user->incrementSessionVersion();
 
         // Kirim notifikasi WhatsApp jika ada nomor HP
-        if ($user->bisaTerimaWa()) {
-            $bulan = $this->getBulanIndonesia(now()->month);
-            $tanggal = now()->format('d');
-            $tahun = now()->format('Y');
-            $pesan = "Yth. {$user->name}, kata sandi akun Sistem RW Anda telah berhasil diubah pada tanggal {$tanggal} {$bulan} {$tahun}. Jika merasa tidak melakukan perubahan ini, segera hubungi pengurus RW.";
-
-            $this->fonnteService->kirim(
-                $user->no_hp,
-                $pesan,
-                'password_reset_otp',
-                $user
-            );
-        }
+        $this->notifikasi->notifPasswordDiubah($user, 'melalui fitur lupa kata sandi');
 
         // Bersihkan session
         session()->forget([
@@ -271,25 +259,5 @@ class PasswordResetController extends Controller
         return User::whereRaw('LOWER(email) = ?', [strtolower($identifier)])
             ->where('akun_aktif', true)
             ->first();
-    }
-
-    protected function getBulanIndonesia(int $bulan): string
-    {
-        $bulanMap = [
-            1  => 'Januari',
-            2  => 'Februari',
-            3  => 'Maret',
-            4  => 'April',
-            5  => 'Mei',
-            6  => 'Juni',
-            7  => 'Juli',
-            8  => 'Agustus',
-            9  => 'September',
-            10 => 'Oktober',
-            11 => 'November',
-            12 => 'Desember',
-        ];
-
-        return $bulanMap[$bulan] ?? '';
     }
 }

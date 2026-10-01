@@ -74,13 +74,41 @@ class FonnteService
                     'countryCode' => $this->countryCode,
                 ]);
 
-            if ($response->successful()) {
-                Log::info('[Fonnte] Pesan terkirim', ['target' => $normalized]);
+            // Gagal di level HTTP (4xx/5xx/timeout)
+            if (!$response->successful()) {
+                $err = 'HTTP ' . $response->status() . ': ' . $response->body();
+                Log::error('[Fonnte] Gagal mengirim pesan', ['target' => $normalized, 'response' => $err]);
+                $this->log($user, $normalized, $jenis, $pesan, 'gagal', $err);
+                return false;
+            }
+
+            // Fonnte selalu membalas HTTP 200 walau pesan gagal terkirim
+            // (mis. nomor tidak terdaftar WA, token invalid, rate limit),
+            // lewat field "status" di body JSON. Jangan hanya andalkan HTTP 2xx.
+            $body   = $response->json();
+            $raw    = $response->body();
+            $status = is_array($body) && array_key_exists('status', $body)
+                ? filter_var($body['status'], FILTER_VALIDATE_BOOL)
+                : false; // Status tidak diketahui ≠ sukses (hindari false positive)
+
+            // Log mentah selalu dicatat agar mudah menelusuri di tahap mana gagal.
+            Log::debug('[Fonnte] Respon mentah', [
+                'target' => $normalized,
+                'jenis'  => $jenis,
+                'status' => $status,
+                'body'   => mb_substr($raw, 0, 500),
+            ]);
+
+            if ($status) {
+                Log::info('[Fonnte] Pesan terkirim', ['target' => $normalized, 'jenis' => $jenis]);
                 $this->log($user, $normalized, $jenis, $pesan, 'terkirim');
                 return true;
             }
 
-            $err = 'HTTP ' . $response->status() . ': ' . $response->body();
+            $reason = is_array($body) && !empty($body['reason'])
+                ? $body['reason']
+                : (mb_substr($raw, 0, 300) ?: 'Response tanpa field status');
+            $err = 'Fonnte menolak: ' . $reason;
             Log::error('[Fonnte] Gagal mengirim pesan', ['target' => $normalized, 'response' => $err]);
             $this->log($user, $normalized, $jenis, $pesan, 'gagal', $err);
             return false;
@@ -93,39 +121,62 @@ class FonnteService
 
     /**
      * Kirim ke banyak user. Hanya user notif_wa_aktif=true & punya no_hp.
-     * Gunakan queue untuk menghindari rate limit jika banyak user.
+     * Bila $useQueue null → mengikuti config 'fonnte.queue' (default sync),
+     * karena broadcast lewat queue baru benar-benar terkirim bila worker
+     * 'php artisan queue:work' berjalan di server.
      */
-    public function kirimKeUsers(iterable $users, string $pesan, string $jenis = 'manual', bool $useQueue = false): int
+    public function kirimKeUsers(iterable $users, string $pesan, string $jenis = 'manual', ?bool $useQueue = null): int
     {
+        $useQueue ??= (bool) config('fonnte.queue', false);
+
         $targetUsers = collect($users)
             ->filter(fn ($u) => $u instanceof User && $u->bisaTerimaWa())
             ->values();
 
         if ($targetUsers->isEmpty()) {
+            Log::warning('[Fonnte] kirimKeUsers tanpa target', ['jenis' => $jenis]);
             return 0;
         }
 
-        // Jika menggunakan queue, dispatch job per user dengan delay batching
-        if ($useQueue && app()->bound('queue')) {
+        $mode = ($useQueue && config('queue.default') !== 'sync') ? 'queue' : 'sync';
+        Log::info('[Fonnte] kirimKeUsers mulai', [
+            'jenis'  => $jenis,
+            'target' => $targetUsers->count(),
+            'mode'   => $mode,
+        ]);
+
+        // Jika menggunakan queue, dispatch job per user dengan delay batching.
+        // Catatan: jangan pakai app()->bound('queue') — QueueManager selalu
+        // ter-register sehingga cek tsb tidak pernah berguna. Guard yang benar
+        // adalah koneksi queue aktif; bila 'sync' fallback ke eksekusi langsung.
+        if ($mode === 'queue') {
             $targetUsers->each(function (User $user, int $index) use ($pesan, $jenis) {
                 dispatch(
                     new \App\Jobs\KirimWaJob($user->no_hp, $pesan, $jenis, $user)
                 )->delay(now()->addSeconds($index * 2)); // Delay 2 detik antar pesan
             });
+            Log::info('[Fonnte] Broadcast masuk antrean queue', [
+                'jenis'  => $jenis,
+                'jumlah' => $targetUsers->count(),
+            ]);
             return $targetUsers->count();
         }
 
         // Eksekusi langsung (mode sync)
-        $sukses = 0;
+        $sukses   = 0;
+        $attempts = 0;
         foreach ($targetUsers as $u) {
+            $attempts++;
             if ($this->kirim($u->no_hp, $pesan, $jenis, $u)) {
                 $sukses++;
             }
-            // Delay kecil antar pesan untuk menghindari rate limit
-            if ($sukses > 0 && $sukses % 10 === 0) {
-                usleep(500000); // 0.5 detik setiap 10 pesan
+            // Delay kecil per 10 percobaan (sukses maupun gagal) untuk
+            // menghindari rate limit Fonnte.
+            if ($attempts % 10 === 0) {
+                usleep(500000); // 0.5 detik
             }
         }
+        Log::info('[Fonnte] Broadcast selesai', ['jenis' => $jenis, 'sukses' => $sukses, 'attempts' => $attempts]);
         return $sukses;
     }
 
@@ -141,18 +192,34 @@ class FonnteService
 
     public function normalisasiNomor(?string $nomor): ?string
     {
-        if (!$nomor) return null;
+        if ($nomor === null || trim($nomor) === '') {
+            return null;
+        }
 
         $clean = preg_replace('/[^0-9]/', '', $nomor);
-        if (!$clean) return null;
+        if ($clean === null || $clean === '') {
+            return null;
+        }
+
+        // "6208123456789" (kode negara + 0 rangkap) -> "628123456789"
+        if (str_starts_with($clean, $this->countryCode . '0')) {
+            $clean = $this->countryCode . substr($clean, strlen($this->countryCode) + 1);
+        }
 
         if (str_starts_with($clean, '0')) {
-            $clean = $this->countryCode . substr($clean, 1);
+            // Format lokal "0xxx" / "00xxx": buang SEMUA 0 di awal.
+            $clean = ltrim($clean, '0');
+            // Bila sisanya sudah memuat kode negara ("00628..." -> "628..."),
+            // biarkan; selain itu tambahkan kode negara ("0812..." -> "62812...").
+            if (!str_starts_with($clean, $this->countryCode)) {
+                $clean = $this->countryCode . $clean;
+            }
+        } elseif (!str_starts_with($clean, $this->countryCode) && str_starts_with($clean, '8')) {
+            // Format lokal tanpa awalan 0/62: "812xxx..." -> "62812xxx..."
+            $clean = $this->countryCode . $clean;
         }
-
-        if (!str_starts_with($clean, $this->countryCode)) {
-            $clean = $this->countryCode . ltrim($clean, '0');
-        }
+        // Selain itu dianggap sudah format internasional (mis. "6012..." nomor
+        // luar negeri) — dibiarkan apa adanya, tidak dipaksa ke kode negara lokal.
 
         if (strlen($clean) < strlen($this->countryCode) + 8) {
             return null;
